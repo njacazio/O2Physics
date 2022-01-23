@@ -481,9 +481,10 @@ struct tofPidFullQa {
     histos.add(hexpsigma[i].data(), "", kTH2F, {pAxis, expSigmaAxis});
 
     // NSigma
-    const AxisSpec nSigmaAxis{nBinsNSigma, minNSigma, maxNSigma, Form("N_{#sigma}^{TOF}(%s)", pT[i])};
-    histos.add(hnsigma[i].data(), "", kTH2F, {pAxis, nSigmaAxis});
-    histos.add(hnsigmapt[i].data(), "", kTH2F, {ptAxis, nSigmaAxis});
+    const char* axisTitle = Form("N_{#sigma}^{TPC}(%s)", pT[i]);
+    const AxisSpec nSigmaAxis{nBinsNSigma, minNSigma, maxNSigma, axisTitle};
+    histos.add(hnsigma[i].data(), axisTitle, kTH2F, {pAxis, nSigmaAxis});
+    histos.add(hnsigmapt[i].data(), axisTitle, kTH2F, {ptAxis, nSigmaAxis});
   }
 
   void init(o2::framework::InitContext&)
@@ -513,6 +514,10 @@ struct tofPidFullQa {
     h->GetXaxis()->SetBinLabel(4, "Passed vtx Z");
 
     histos.add("event/vertexz", "", kTH1F, {vtxZAxis});
+    h = histos.add<TH1>("event/particlehypo", "", kTH1F, {{10, 0, 10, "PID in tracking"}});
+    for (int i = 0; i < 9; i++) {
+      h->GetXaxis()->SetBinLabel(i + 1, PID::getName(i));
+    }
     histos.add("event/tofmultiplicity", "", kTH1F, {multAxis});
     histos.add("event/colltime", "", kTH1F, {colTimeAxis});
     histos.add("event/colltimereso", "", kTH2F, {multAxis, colTimeResoAxis});
@@ -601,6 +606,7 @@ struct tofPidFullQa {
       const float tof = t.tofSignal() - collisionTime_ps;
 
       //
+      histos.fill(HIST("event/particlehypo"), t.pidForTracking());
       histos.fill(HIST("event/tofsignal"), t.p(), t.tofSignal());
       histos.fill(HIST("event/pexp"), t.p(), t.tofExpMom());
       histos.fill(HIST("event/eta"), t.eta());
