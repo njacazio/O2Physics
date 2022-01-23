@@ -457,26 +457,26 @@ struct tpcPidFullQaWTof {
     });
   }
 
-  template <o2::track::PID::ID id, typename T>
+  template <o2::track::PID::ID id2, typename T>
   void fillParticleHistos(const T& t, const float& mom, const float& exp_diff, const float& expsigma)
   {
     if (applyRapidityCut) {
-      const float y = TMath::ASinH(t.pt() / TMath::Sqrt(PID::getMass2(id) + t.pt() * t.pt()) * TMath::SinH(t.eta()));
+      const float y = TMath::ASinH(t.pt() / TMath::Sqrt(PID::getMass2(id2) + t.pt() * t.pt()) * TMath::SinH(t.eta()));
       if (abs(y) > 0.5) {
         return;
       }
     }
     // Fill histograms
-    histos.fill(HIST(hexpected[id]), mom, t.tpcSignal() - exp_diff);
-    histos.fill(HIST(hexpected_diff[id]), mom, exp_diff);
-    histos.fill(HIST(hexpsigma[id]), t.p(), expsigma);
-    const auto& nsigma = o2::aod::pidutils::tpcNSigma(id, t);
-    histos.fill(HIST(hnsigma[id]), t.p(), nsigma);
-    histos.fill(HIST(hnsigmapt[id]), t.pt(), nsigma);
+    histos.fill(HIST(hexpected[id2]), mom, t.tpcSignal() - exp_diff);
+    histos.fill(HIST(hexpected_diff[id2]), mom, exp_diff);
+    histos.fill(HIST(hexpsigma[id2]), t.p(), expsigma);
+    const auto& nsigma = o2::aod::pidutils::tpcNSigma(id2, t);
+    histos.fill(HIST(hnsigma[id2]), t.p(), nsigma);
+    histos.fill(HIST(hnsigmapt[id2]), t.pt(), nsigma);
     if (t.sign() > 0) {
-      histos.fill(HIST(hnsigmapospt[id]), t.pt(), nsigma);
+      histos.fill(HIST(hnsigmapospt[id2]), t.pt(), nsigma);
     } else {
-      histos.fill(HIST(hnsigmanegpt[id]), t.pt(), nsigma);
+      histos.fill(HIST(hnsigmanegpt[id2]), t.pt(), nsigma);
     }
   }
 
