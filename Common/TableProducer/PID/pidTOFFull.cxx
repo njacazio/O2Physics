@@ -481,7 +481,7 @@ struct tofPidFullQa {
     histos.add(hexpsigma[i].data(), "", kTH2F, {pAxis, expSigmaAxis});
 
     // NSigma
-    const char* axisTitle = Form("N_{#sigma}^{TPC}(%s)", pT[i]);
+    const char* axisTitle = Form("N_{#sigma}^{TOF}(%s)", pT[i]);
     const AxisSpec nSigmaAxis{nBinsNSigma, minNSigma, maxNSigma, axisTitle};
     histos.add(hnsigma[i].data(), axisTitle, kTH2F, {pAxis, nSigmaAxis});
     histos.add(hnsigmapt[i].data(), axisTitle, kTH2F, {ptAxis, nSigmaAxis});

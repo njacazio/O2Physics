@@ -34,6 +34,8 @@
 #include "TableHelper.h"
 #include "Common/DataModel/EventSelection.h"
 #include "Framework/StaticFor.h"
+#include "Common/Core/TrackSelection.h"
+#include "Common/Core/TrackSelectionDefaults.h"
 
 using namespace o2;
 using namespace o2::framework;
@@ -186,12 +188,16 @@ struct tpcPidFullQa {
   static constexpr std::string_view hnsigmanegpt[Np] = {"nsigmanegpt/El", "nsigmanegpt/Mu", "nsigmanegpt/Pi",
                                                         "nsigmanegpt/Ka", "nsigmanegpt/Pr", "nsigmanegpt/De",
                                                         "nsigmanegpt/Tr", "nsigmanegpt/He", "nsigmanegpt/Al"};
-  static constexpr std::string_view hdcaxy[Np] = {"hdcaxy/El", "hdcaxy/Mu", "hdcaxy/Pi",
-                                                  "hdcaxy/Ka", "hdcaxy/Pr", "hdcaxy/De",
-                                                  "hdcaxy/Tr", "hdcaxy/He", "hdcaxy/Al"};
+  static constexpr std::string_view hdcaxy[Np] = {"dcaxy/El", "dcaxy/Mu", "dcaxy/Pi",
+                                                  "dcaxy/Ka", "dcaxy/Pr", "dcaxy/De",
+                                                  "dcaxy/Tr", "dcaxy/He", "dcaxy/Al"};
+  static constexpr std::string_view hdcaz[Np] = {"dcaz/El", "dcaz/Mu", "dcaz/Pi",
+                                                 "dcaz/Ka", "dcaz/Pr", "dcaz/De",
+                                                 "dcaz/Tr", "dcaz/He", "dcaz/Al"};
 
   HistogramRegistry histos{"Histos", {}, OutputObjHandlingPolicy::QAObject};
 
+  TrackSelection globalTrackswoPrim; // Track without cut for primaries
   Configurable<int> logAxis{"logAxis", 1, "Flag to use a log momentum axis"};
   Configurable<int> nBinsP{"nBinsP", 3000, "Number of bins for the momentum"};
   Configurable<float> minP{"minP", 0.01, "Minimum momentum in range"};
@@ -231,10 +237,23 @@ struct tpcPidFullQa {
     histos.add(hnsigmapt[i].data(), axisTitle, kTH2F, {ptAxis, nSigmaAxis});
     histos.add(hnsigmapospt[i].data(), axisTitle, kTH2F, {ptAxis, nSigmaAxis});
     histos.add(hnsigmanegpt[i].data(), axisTitle, kTH2F, {ptAxis, nSigmaAxis});
+    // DCAxy
+    const AxisSpec dcaXyAxis{600, -3.01, 2.99, "DCA_{xy} (cm)"};
+    histos.add(hdcaxy[i].data(), axisTitle, kTH2F, {ptAxis, dcaXyAxis});
+    const AxisSpec dcaZAxis{600, -3.01, 2.99, "DCA_{z} (cm)"};
+    histos.add(hdcaz[i].data(), axisTitle, kTH2F, {ptAxis, dcaZAxis});
   }
 
   void init(o2::framework::InitContext&)
   {
+
+    globalTrackswoPrim = getGlobalTrackSelection();
+    globalTrackswoPrim.SetMaxDcaXYPtDep([](float pt) { return 3.f + pt; });
+    globalTrackswoPrim.SetRequireGoldenChi2(false);
+    if (1) {
+      globalTrackswoPrim.SetTrackType(o2::aod::track::TrackTypeEnum::Track);
+    }
+
     const AxisSpec multAxis{1000, 0.f, 1000.f, "Track multiplicity"};
     const AxisSpec vtxZAxis{100, -20, 20, "Vtx_{z} (cm)"};
     const AxisSpec pAxisPosNeg{nBinsP, -maxP, maxP, "Signed #it{p} (GeV/#it{c})"};
@@ -276,11 +295,20 @@ struct tpcPidFullQa {
         return;
       }
     }
+    const auto& nsigma = o2::aod::pidutils::tpcNSigma(id, t);
+    if (globalTrackswoPrim.IsSelected(t)) {
+      if (std::abs(nsigma) < 2) {
+        histos.fill(HIST(hdcaxy[id]), t.pt(), t.dcaXY());
+        histos.fill(HIST(hdcaz[id]), t.pt(), t.dcaZ());
+      }
+    }
+    if (!t.isGlobalTrack()) {
+      return;
+    }
     // Fill histograms
     histos.fill(HIST(hexpected[id]), mom, t.tpcSignal() - exp_diff);
     histos.fill(HIST(hexpected_diff[id]), mom, exp_diff);
     histos.fill(HIST(hexpsigma[id]), t.p(), expsigma);
-    const auto& nsigma = o2::aod::pidutils::tpcNSigma(id, t);
     histos.fill(HIST(hnsigma[id]), t.p(), nsigma);
     histos.fill(HIST(hnsigmapt[id]), t.pt(), nsigma);
     if (t.sign() > 0) {
@@ -291,7 +319,7 @@ struct tpcPidFullQa {
   }
 
   void process(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision,
-               soa::Join<aod::Tracks, aod::TracksExtra,
+               soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
                          aod::pidTPCFullEl, aod::pidTPCFullMu, aod::pidTPCFullPi,
                          aod::pidTPCFullKa, aod::pidTPCFullPr, aod::pidTPCFullDe,
                          aod::pidTPCFullTr, aod::pidTPCFullHe, aod::pidTPCFullAl,
@@ -333,9 +361,11 @@ struct tpcPidFullQa {
       }
       // const float mom = t.p();
       const float mom = t.tpcInnerParam();
-      histos.fill(HIST("event/particlehypo"), t.pidForTracking());
-      histos.fill(HIST("event/tpcsignal"), mom, t.tpcSignal());
-      histos.fill(HIST("event/signedtpcsignal"), mom * t.sign(), t.tpcSignal());
+      if (t.isGlobalTrack()) {
+        histos.fill(HIST("event/particlehypo"), t.pidForTracking());
+        histos.fill(HIST("event/tpcsignal"), mom, t.tpcSignal());
+        histos.fill(HIST("event/signedtpcsignal"), mom * t.sign(), t.tpcSignal());
+      }
       //
       fillParticleHistos<PID::Electron>(t, mom, t.tpcExpSignalDiffEl(), t.tpcExpSigmaEl());
       fillParticleHistos<PID::Muon>(t, mom, t.tpcExpSignalDiffMu(), t.tpcExpSigmaMu());

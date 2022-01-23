@@ -32,6 +32,7 @@
 #include "Common/Core/PID/PIDResponse.h"
 #include "Common/DataModel/TrackSelectionTables.h"
 #include "Framework/AnalysisTask.h"
+#include "Framework/StaticFor.h"
 
 using namespace o2;
 using namespace o2::framework;
@@ -223,7 +224,7 @@ struct identifiedraaTask {
     fillHistograms_MC<5>(tracks, mcParticles);
   }
 
-  PROCESS_SWITCH(identifiedraaTask, processMC, "Process simulation events", false);
+  // PROCESS_SWITCH(identifiedraaTask, processMC, "Process simulation events", false);
 
   template <std::size_t i, typename T>
   void fillHistogramsData(T const& tracks)
@@ -286,11 +287,11 @@ struct identifiedraaTask {
   }
 
   // void processData(soa::Join<aod::Collisions, aod::EvSels, aod::CentV0Ms>::iterator const& collision,
-  void processData(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision,
-                   soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
-                             aod::pidTOFFullPi, aod::pidTOFFullKa,
-                             aod::pidTOFFullPr, aod::pidTPCFullPi,
-                             aod::pidTPCFullKa, aod::pidTPCFullPr> const& tracks)
+  void process(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision,
+               soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
+                         aod::pidTOFFullPi, aod::pidTOFFullKa,
+                         aod::pidTOFFullPr, aod::pidTPCFullPi,
+                         aod::pidTPCFullKa, aod::pidTPCFullPr> const& tracks)
   {
     // LOGF(info, "Enter processData!");
     histos.fill(HIST(num_events), 1);
@@ -321,28 +322,25 @@ struct identifiedraaTask {
     fillHistogramsData<5>(tracks);
   }
 
-  PROCESS_SWITCH(identifiedraaTask, processData, "Process data events", true);
+  // PROCESS_SWITCH(identifiedraaTask, processData, "Process data events", true);
 
-  void processMCasData(aod::Collision const& collision,
-                       soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
-                                 aod::pidTOFFullPi, aod::pidTOFFullKa,
-                                 aod::pidTOFFullPr, aod::pidTPCFullPi,
-                                 aod::pidTPCFullKa, aod::pidTPCFullPr> const& tracks)
-  {
-    // LOGF(info, "Enter processData!");
-    histos.fill(HIST(num_events), 1);
-    if (std::abs(collision.posZ()) > 10.f) {
-      return;
-    }
-    histos.fill(HIST(num_events), 2);
-    fillHistogramsData<0>(tracks);
-    fillHistogramsData<1>(tracks);
-    fillHistogramsData<2>(tracks);
-    fillHistogramsData<3>(tracks);
-    fillHistogramsData<4>(tracks);
-    fillHistogramsData<5>(tracks);
-  }
-  PROCESS_SWITCH(identifiedraaTask, processMCasData, "Process simulation events as data events", false);
+  // void processMCasData(aod::Collision const& collision,
+  //                      soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
+  //                                aod::pidTOFFullPi, aod::pidTOFFullKa,
+  //                                aod::pidTOFFullPr, aod::pidTPCFullPi,
+  //                                aod::pidTPCFullKa, aod::pidTPCFullPr> const& tracks)
+  // {
+  //   // LOGF(info, "Enter processData!");
+  //   histos.fill(HIST(num_events), 1);
+  //   if (std::abs(collision.posZ()) > 10.f) {
+  //     return;
+  //   }
+  //   histos.fill(HIST(num_events), 2);
+  //   static_for<0, 5>([&](auto i) {
+  //     fillHistogramsData<i>(tracks);
+  //   });
+  // }
+  // PROCESS_SWITCH(identifiedraaTask, processMCasData, "Process simulation events as data events", false);
 };
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
