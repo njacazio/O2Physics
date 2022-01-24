@@ -406,9 +406,6 @@ struct tpcPidFullQaWTof {
   static constexpr std::string_view hnsigmanegpt[Np] = {"nsigmanegpt/El", "nsigmanegpt/Mu", "nsigmanegpt/Pi",
                                                         "nsigmanegpt/Ka", "nsigmanegpt/Pr", "nsigmanegpt/De",
                                                         "nsigmanegpt/Tr", "nsigmanegpt/He", "nsigmanegpt/Al"};
-  static constexpr std::string_view hdcaxy[Np] = {"hdcaxy/El", "hdcaxy/Mu", "hdcaxy/Pi",
-                                                  "hdcaxy/Ka", "hdcaxy/Pr", "hdcaxy/De",
-                                                  "hdcaxy/Tr", "hdcaxy/He", "hdcaxy/Al"};
 
   HistogramRegistry histos{"Histos", {}, OutputObjHandlingPolicy::QAObject};
 

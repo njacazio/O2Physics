@@ -24,6 +24,8 @@
 #include <CCDB/BasicCCDBManager.h>
 #include "Common/Core/PID/PIDResponse.h"
 
+#include "TMCProcess.h"
+
 using namespace o2;
 using namespace o2::framework;
 using namespace o2::framework::expressions;
@@ -63,6 +65,25 @@ struct pidTPCTaskQA {
   static constexpr std::string_view hnsigmaMCprm[Np] = {"nsigmaMCprm/El", "nsigmaMCprm/Mu", "nsigmaMCprm/Pi",
                                                         "nsigmaMCprm/Ka", "nsigmaMCprm/Pr", "nsigmaMCprm/De",
                                                         "nsigmaMCprm/Tr", "nsigmaMCprm/He", "nsigmaMCprm/Al"};
+  static constexpr std::string_view hdcaxyprm[Np] = {"dcaxyprm/El", "dcaxyprm/Mu", "dcaxyprm/Pi",
+                                                     "dcaxyprm/Ka", "dcaxyprm/Pr", "dcaxyprm/De",
+                                                     "dcaxyprm/Tr", "dcaxyprm/He", "dcaxyprm/Al"};
+  static constexpr std::string_view hdcaxymat[Np] = {"dcaxymat/El", "dcaxymat/Mu", "dcaxymat/Pi",
+                                                     "dcaxymat/Ka", "dcaxymat/Pr", "dcaxymat/De",
+                                                     "dcaxymat/Tr", "dcaxymat/He", "dcaxymat/Al"};
+  static constexpr std::string_view hdcaxystr[Np] = {"dcaxystr/El", "dcaxystr/Mu", "dcaxystr/Pi",
+                                                     "dcaxystr/Ka", "dcaxystr/Pr", "dcaxystr/De",
+                                                     "dcaxystr/Tr", "dcaxystr/He", "dcaxystr/Al"};
+  static constexpr std::string_view hdcazprm[Np] = {"dcazprm/El", "dcazprm/Mu", "dcazprm/Pi",
+                                                    "dcazprm/Ka", "dcazprm/Pr", "dcazprm/De",
+                                                    "dcazprm/Tr", "dcazprm/He", "dcazprm/Al"};
+  static constexpr std::string_view hdcazmat[Np] = {"dcazmat/El", "dcazmat/Mu", "dcazmat/Pi",
+                                                    "dcazmat/Ka", "dcazmat/Pr", "dcazmat/De",
+                                                    "dcazmat/Tr", "dcazmat/He", "dcazmat/Al"};
+  static constexpr std::string_view hdcazstr[Np] = {"dcazstr/El", "dcazstr/Mu", "dcazstr/Pi",
+                                                    "dcazstr/Ka", "dcazstr/Pr", "dcazstr/De",
+                                                    "dcazstr/Tr", "dcazstr/He", "dcazstr/Al"};
+
   static constexpr const char* pT[Np] = {"e", "#mu", "#pi", "K", "p", "d", "t", "^{3}He", "#alpha"};
   static constexpr int PDGs[Np] = {11, 13, 211, 321, 2212, 1000010020, 1000010030, 1000020030};
   HistogramRegistry histos{"Histos", {}, OutputObjHandlingPolicy::QAObject};
@@ -97,6 +118,15 @@ struct pidTPCTaskQA {
     }
     histos.add(hnsigmaMCprm[i].data(), Form("True Primary %s", pT[i]), HistType::kTH2F, {ptAxis, nSigmaAxis});
     histos.add(hnsigmaMCsec[i].data(), Form("True Secondary %s", pT[i]), HistType::kTH2F, {ptAxis, nSigmaAxis});
+    // DCAxy
+    const AxisSpec dcaXyAxis{600, -3.01, 2.99, "DCA_{xy} (cm)"};
+    histos.add(hdcaxyprm[i].data(), axisTitle, kTH2F, {ptAxis, dcaXyAxis});
+    histos.add(hdcaxymat[i].data(), axisTitle, kTH2F, {ptAxis, dcaXyAxis});
+    histos.add(hdcaxystr[i].data(), axisTitle, kTH2F, {ptAxis, dcaXyAxis});
+    const AxisSpec dcaZAxis{600, -3.01, 2.99, "DCA_{z} (cm)"};
+    histos.add(hdcazprm[i].data(), axisTitle, kTH2F, {ptAxis, dcaZAxis});
+    histos.add(hdcazmat[i].data(), axisTitle, kTH2F, {ptAxis, dcaZAxis});
+    histos.add(hdcazstr[i].data(), axisTitle, kTH2F, {ptAxis, dcaZAxis});
   }
 
   void init(o2::framework::InitContext&)
@@ -156,14 +186,23 @@ struct pidTPCTaskQA {
       // Selecting primaries
       if (particle.isPhysicalPrimary()) {
         histos.fill(HIST(hnsigmaMCprm[pidIndex]), track.pt(), nsigma);
+        histos.fill(HIST(hdcaxyprm[id]), track.pt(), track.dcaXY());
+        histos.fill(HIST(hdcazprm[id]), track.pt(), track.dcaZ());
       } else {
         histos.fill(HIST(hnsigmaMCsec[pidIndex]), track.pt(), nsigma);
+        if (particle.getProcess() == TMCProcess::kPDecay) {
+          histos.fill(HIST(hdcaxystr[id]), track.pt(), track.dcaXY());
+          histos.fill(HIST(hdcazstr[id]), track.pt(), track.dcaZ());
+        } else {
+          histos.fill(HIST(hdcaxymat[id]), track.pt(), track.dcaXY());
+          histos.fill(HIST(hdcazmat[id]), track.pt(), track.dcaZ());
+        }
       }
     }
   }
 
   void process(soa::Join<aod::Collisions, aod::McCollisionLabels>::iterator const& collision,
-               soa::Join<aod::Tracks, aod::TracksExtra,
+               soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
                          aod::pidTPCFullEl, aod::pidTPCFullMu, aod::pidTPCFullPi,
                          aod::pidTPCFullKa, aod::pidTPCFullPr, aod::pidTPCFullDe,
                          aod::pidTPCFullTr, aod::pidTPCFullHe, aod::pidTPCFullAl,
