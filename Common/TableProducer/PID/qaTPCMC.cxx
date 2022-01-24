@@ -119,6 +119,7 @@ struct pidTPCTaskQA {
     histos.add(hnsigmaMCprm[i].data(), Form("True Primary %s", pT[i]), HistType::kTH2F, {ptAxis, nSigmaAxis});
     histos.add(hnsigmaMCsec[i].data(), Form("True Secondary %s", pT[i]), HistType::kTH2F, {ptAxis, nSigmaAxis});
     // DCAxy
+    const char* axisTitle = "DCA";
     const AxisSpec dcaXyAxis{600, -3.01, 2.99, "DCA_{xy} (cm)"};
     histos.add(hdcaxyprm[i].data(), axisTitle, kTH2F, {ptAxis, dcaXyAxis});
     histos.add(hdcaxymat[i].data(), axisTitle, kTH2F, {ptAxis, dcaXyAxis});
@@ -184,18 +185,19 @@ struct pidTPCTaskQA {
 
       histos.fill(HIST(hnsigmaMC[pidIndex]), track.pt(), nsigma);
       // Selecting primaries
+
       if (particle.isPhysicalPrimary()) {
         histos.fill(HIST(hnsigmaMCprm[pidIndex]), track.pt(), nsigma);
-        histos.fill(HIST(hdcaxyprm[id]), track.pt(), track.dcaXY());
-        histos.fill(HIST(hdcazprm[id]), track.pt(), track.dcaZ());
+        histos.fill(HIST(hdcaxyprm[pidIndex]), track.pt(), track.dcaXY());
+        histos.fill(HIST(hdcazprm[pidIndex]), track.pt(), track.dcaZ());
       } else {
         histos.fill(HIST(hnsigmaMCsec[pidIndex]), track.pt(), nsigma);
         if (particle.getProcess() == TMCProcess::kPDecay) {
-          histos.fill(HIST(hdcaxystr[id]), track.pt(), track.dcaXY());
-          histos.fill(HIST(hdcazstr[id]), track.pt(), track.dcaZ());
+          histos.fill(HIST(hdcaxystr[pidIndex]), track.pt(), track.dcaXY());
+          histos.fill(HIST(hdcazstr[pidIndex]), track.pt(), track.dcaZ());
         } else {
-          histos.fill(HIST(hdcaxymat[id]), track.pt(), track.dcaXY());
-          histos.fill(HIST(hdcazmat[id]), track.pt(), track.dcaZ());
+          histos.fill(HIST(hdcaxymat[pidIndex]), track.pt(), track.dcaXY());
+          histos.fill(HIST(hdcazmat[pidIndex]), track.pt(), track.dcaZ());
         }
       }
     }
