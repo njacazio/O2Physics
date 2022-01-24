@@ -400,12 +400,15 @@ struct tpcPidFullQaWTof {
   static constexpr std::string_view hnsigmapt[Np] = {"nsigmapt/El", "nsigmapt/Mu", "nsigmapt/Pi",
                                                      "nsigmapt/Ka", "nsigmapt/Pr", "nsigmapt/De",
                                                      "nsigmapt/Tr", "nsigmapt/He", "nsigmapt/Al"};
-  static constexpr std::string_view hnsigmapospt[Np] = {"nsigmapospt/El", "nsigmapospt/Mu", "nsigmapospt/Pi",
-                                                        "nsigmapospt/Ka", "nsigmapospt/Pr", "nsigmapospt/De",
-                                                        "nsigmapospt/Tr", "nsigmapospt/He", "nsigmapospt/Al"};
-  static constexpr std::string_view hnsigmanegpt[Np] = {"nsigmanegpt/El", "nsigmanegpt/Mu", "nsigmanegpt/Pi",
-                                                        "nsigmanegpt/Ka", "nsigmanegpt/Pr", "nsigmanegpt/De",
-                                                        "nsigmanegpt/Tr", "nsigmanegpt/He", "nsigmanegpt/Al"};
+  static constexpr std::string_view hnsigmatpctof[Np] = {"nsigmatpctof/El", "nsigmatpctof/Mu", "nsigmatpctof/Pi",
+                                                         "nsigmatpctof/Ka", "nsigmatpctof/Pr", "nsigmatpctof/De",
+                                                         "nsigmatpctof/Tr", "nsigmatpctof/He", "nsigmatpctof/Al"};
+  static constexpr std::string_view hdcaxy[Np] = {"dcaxy/El", "dcaxy/Mu", "dcaxy/Pi",
+                                                  "dcaxy/Ka", "dcaxy/Pr", "dcaxy/De",
+                                                  "dcaxy/Tr", "dcaxy/He", "dcaxy/Al"};
+  static constexpr std::string_view hdcaz[Np] = {"dcaz/El", "dcaz/Mu", "dcaz/Pi",
+                                                 "dcaz/Ka", "dcaz/Pr", "dcaz/De",
+                                                 "dcaz/Tr", "dcaz/He", "dcaz/Al"};
 
   HistogramRegistry histos{"Histos", {}, OutputObjHandlingPolicy::QAObject};
 
@@ -444,10 +447,15 @@ struct tpcPidFullQaWTof {
     // NSigma
     const char* axisTitle = Form("N_{#sigma}^{TPC}(%s)", pT[i]);
     const AxisSpec nSigmaAxis{nBinsNSigma, minNSigma, maxNSigma, axisTitle};
+    const AxisSpec nSigmaTOFAxis{nBinsNSigma, minNSigma, maxNSigma, Form("N_{#sigma}^{TOF}(%s)", pT[i])};
     histos.add(hnsigma[i].data(), axisTitle, kTH2F, {pAxis, nSigmaAxis});
     histos.add(hnsigmapt[i].data(), axisTitle, kTH2F, {ptAxis, nSigmaAxis});
-    histos.add(hnsigmapospt[i].data(), axisTitle, kTH2F, {ptAxis, nSigmaAxis});
-    histos.add(hnsigmanegpt[i].data(), axisTitle, kTH2F, {ptAxis, nSigmaAxis});
+    histos.add(hnsigmatpctof[i].data(), axisTitle, kTH3F, {ptAxis, nSigmaAxis, nSigmaTOFAxis});
+    // DCAxy
+    const AxisSpec dcaXyAxis{600, -3.01, 2.99, "DCA_{xy} (cm)"};
+    histos.add(hdcaxy[i].data(), axisTitle, kTH2F, {ptAxis, dcaXyAxis});
+    const AxisSpec dcaZAxis{600, -3.01, 2.99, "DCA_{z} (cm)"};
+    histos.add(hdcaz[i].data(), axisTitle, kTH2F, {ptAxis, dcaZAxis});
   }
 
   void init(o2::framework::InitContext&)
@@ -494,21 +502,26 @@ struct tpcPidFullQaWTof {
       }
     }
     // Fill histograms
-    histos.fill(HIST(hexpected[id2]), mom, t.tpcSignal() - exp_diff);
-    histos.fill(HIST(hexpected_diff[id2]), mom, exp_diff);
-    histos.fill(HIST(hexpsigma[id2]), t.p(), expsigma);
     const auto& nsigma = o2::aod::pidutils::tpcNSigma(id2, t);
-    histos.fill(HIST(hnsigma[id2]), t.p(), nsigma);
-    histos.fill(HIST(hnsigmapt[id2]), t.pt(), nsigma);
-    if (t.sign() > 0) {
-      histos.fill(HIST(hnsigmapospt[id2]), t.pt(), nsigma);
-    } else {
-      histos.fill(HIST(hnsigmanegpt[id2]), t.pt(), nsigma);
+    const auto& nsigmatof = o2::aod::pidutils::tofNSigma(id2, t);
+    if (std::abs(nsigmatof) < 3.f) {
+      histos.fill(HIST(hexpected[id2]), mom, t.tpcSignal() - exp_diff);
+      histos.fill(HIST(hexpected_diff[id2]), mom, exp_diff);
+      histos.fill(HIST(hexpsigma[id2]), t.p(), expsigma);
+      histos.fill(HIST(hnsigma[id2]), t.p(), nsigma);
+      histos.fill(HIST(hnsigmapt[id2]), t.pt(), nsigma);
     }
+
+    if (std::sqrt(nsigma * nsigma + nsigmatof * nsigmatof) < 2) {
+      histos.fill(HIST(hdcaxy[id]), t.pt(), t.dcaXY());
+      histos.fill(HIST(hdcaz[id]), t.pt(), t.dcaZ());
+    }
+
+    histos.fill(HIST(hnsigmatpctof[id2]), t.pt(), nsigma, nsigmatof);
   }
 
   void process(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision,
-               soa::Join<aod::Tracks, aod::TracksExtra,
+               soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
                          aod::pidTPCFullEl, aod::pidTPCFullMu, aod::pidTPCFullPi,
                          aod::pidTPCFullKa, aod::pidTPCFullPr, aod::pidTPCFullDe,
                          aod::pidTPCFullTr, aod::pidTPCFullHe, aod::pidTPCFullAl,
@@ -536,9 +549,6 @@ struct tpcPidFullQaWTof {
       }
       ntracks += 1;
     }
-    // if (0 && ntracks < 1) {
-    //   return;
-    // }
     histos.fill(HIST("event/evsel"), 3);
     if (abs(collision.posZ()) > 10.f) {
       return;
@@ -551,15 +561,13 @@ struct tpcPidFullQaWTof {
       if (applyTrackCut && !t.isGlobalTrack()) {
         continue;
       }
-      if (std::abs(o2::aod::pidutils::tofNSigma(id, t)) > 3.f) {
-        continue;
-      }
-
       // const float mom = t.p();
       const float mom = t.tpcInnerParam();
-      histos.fill(HIST("event/particlehypo"), t.pidForTracking());
-      histos.fill(HIST("event/tpcsignal"), mom, t.tpcSignal());
-      histos.fill(HIST("event/signedtpcsignal"), mom * t.sign(), t.tpcSignal());
+      if (std::abs(o2::aod::pidutils::tofNSigma(id, t)) < 3.f) {
+        histos.fill(HIST("event/particlehypo"), t.pidForTracking());
+        histos.fill(HIST("event/tpcsignal"), mom, t.tpcSignal());
+        histos.fill(HIST("event/signedtpcsignal"), mom * t.sign(), t.tpcSignal());
+      }
       //
       fillParticleHistos<PID::Electron>(t, mom, t.tpcExpSignalDiffEl(), t.tpcExpSigmaEl());
       fillParticleHistos<PID::Muon>(t, mom, t.tpcExpSignalDiffMu(), t.tpcExpSigmaMu());
