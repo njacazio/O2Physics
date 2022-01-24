@@ -381,7 +381,6 @@ struct tpcPidFullQa {
 };
 
 /// Task to produce the TPC QA plots with TOF PID
-template <o2::track::PID::ID id>
 struct tpcPidFullQaWTof {
   static constexpr int Np = 9;
   static constexpr const char* pT[Np] = {"e", "#mu", "#pi", "K", "p", "d", "t", "^{3}He", "#alpha"};
@@ -409,6 +408,9 @@ struct tpcPidFullQaWTof {
   static constexpr std::string_view hdcaz[Np] = {"dcaz/El", "dcaz/Mu", "dcaz/Pi",
                                                  "dcaz/Ka", "dcaz/Pr", "dcaz/De",
                                                  "dcaz/Tr", "dcaz/He", "dcaz/Al"};
+  static constexpr std::string_view hsignal[Np] = {"signal/El", "signal/Mu", "signal/Pi",
+                                                   "signal/Ka", "signal/Pr", "signal/De",
+                                                   "signal/Tr", "signal/He", "signal/Al"};
 
   HistogramRegistry histos{"Histos", {}, OutputObjHandlingPolicy::QAObject};
 
@@ -429,33 +431,35 @@ struct tpcPidFullQaWTof {
   Configurable<bool> applyTrackCut{"applyTrackCut", false, "Flag to apply standard track cuts"};
   Configurable<bool> applyRapidityCut{"applyRapidityCut", false, "Flag to apply rapidity cut"};
 
-  template <uint8_t i>
+  template <o2::track::PID::ID id>
   void addParticleHistos(const AxisSpec& pAxis, const AxisSpec& ptAxis)
   {
     // Exp signal
-    const AxisSpec expAxis{1000, 0, 1000, Form("d#it{E}/d#it{x}_(%s) A.U.", pT[i])};
-    histos.add(hexpected[i].data(), "", kTH2F, {pAxis, expAxis});
+    const AxisSpec expAxis{1000, 0, 1000, Form("d#it{E}/d#it{x}_(%s) A.U.", pT[id])};
+    histos.add(hexpected[id].data(), "", kTH2F, {pAxis, expAxis});
 
     // Signal - Expected signal
-    const AxisSpec deltaAxis{nBinsDelta, minDelta, maxDelta, Form("d#it{E}/d#it{x} - d#it{E}/d#it{x}(%s)", pT[i])};
-    histos.add(hexpected_diff[i].data(), "", kTH2F, {pAxis, deltaAxis});
+    const AxisSpec deltaAxis{nBinsDelta, minDelta, maxDelta, Form("d#it{E}/d#it{x} - d#it{E}/d#it{x}(%s)", pT[id])};
+    histos.add(hexpected_diff[id].data(), "", kTH2F, {pAxis, deltaAxis});
 
     // Exp Sigma
-    const AxisSpec expSigmaAxis{nBinsExpSigma, minExpSigma, maxExpSigma, Form("Exp_{#sigma}^{TPC}(%s)", pT[i])};
-    histos.add(hexpsigma[i].data(), "", kTH2F, {pAxis, expSigmaAxis});
+    const AxisSpec expSigmaAxis{nBinsExpSigma, minExpSigma, maxExpSigma, Form("Exp_{#sigma}^{TPC}(%s)", pT[id])};
+    histos.add(hexpsigma[id].data(), "", kTH2F, {pAxis, expSigmaAxis});
 
     // NSigma
-    const char* axisTitle = Form("N_{#sigma}^{TPC}(%s)", pT[i]);
+    const char* axisTitle = Form("N_{#sigma}^{TPC}(%s)", pT[id]);
     const AxisSpec nSigmaAxis{nBinsNSigma, minNSigma, maxNSigma, axisTitle};
-    const AxisSpec nSigmaTOFAxis{nBinsNSigma, minNSigma, maxNSigma, Form("N_{#sigma}^{TOF}(%s)", pT[i])};
-    histos.add(hnsigma[i].data(), axisTitle, kTH2F, {pAxis, nSigmaAxis});
-    histos.add(hnsigmapt[i].data(), axisTitle, kTH2F, {ptAxis, nSigmaAxis});
-    histos.add(hnsigmatpctof[i].data(), axisTitle, kTH3F, {ptAxis, nSigmaAxis, nSigmaTOFAxis});
+    const AxisSpec nSigmaTOFAxis{nBinsNSigma, minNSigma, maxNSigma, Form("N_{#sigma}^{TOF}(%s)", pT[id])};
+    histos.add(hnsigma[id].data(), axisTitle, kTH2F, {pAxis, nSigmaAxis});
+    histos.add(hnsigmapt[id].data(), axisTitle, kTH2F, {ptAxis, nSigmaAxis});
+    // histos.add(hnsigmatpctof[id].data(), axisTitle, kTH3F, {ptAxis, nSigmaAxis, nSigmaTOFAxis});
+    const AxisSpec dedxAxis{1000, 0, 1000, "d#it{E}/d#it{x} A.U."};
+    histos.add(hsignal[id].data(), "", kTH2F, {pAxis, dedxAxis});
     // DCAxy
     const AxisSpec dcaXyAxis{600, -3.01, 2.99, "DCA_{xy} (cm)"};
-    histos.add(hdcaxy[i].data(), axisTitle, kTH2F, {ptAxis, dcaXyAxis});
+    histos.add(hdcaxy[id].data(), axisTitle, kTH2F, {ptAxis, dcaXyAxis});
     const AxisSpec dcaZAxis{600, -3.01, 2.99, "DCA_{z} (cm)"};
-    histos.add(hdcaz[i].data(), axisTitle, kTH2F, {ptAxis, dcaZAxis});
+    histos.add(hdcaz[id].data(), axisTitle, kTH2F, {ptAxis, dcaZAxis});
   }
 
   void init(o2::framework::InitContext&)
@@ -469,7 +473,6 @@ struct tpcPidFullQaWTof {
       ptAxis.makeLogaritmic();
       pAxis.makeLogaritmic();
     }
-    const AxisSpec dedxAxis{1000, 0, 1000, "d#it{E}/d#it{x} A.U."};
 
     // Event properties
     auto h = histos.add<TH1>("event/evsel", "", kTH1F, {{10, 0.5, 10.5, "Ev. Sel."}});
@@ -484,32 +487,32 @@ struct tpcPidFullQaWTof {
       h->GetXaxis()->SetBinLabel(i + 1, PID::getName(i));
     }
     histos.add("event/multiplicity", "", kTH1F, {multAxis});
-    histos.add("event/tpcsignal", "", kTH2F, {pAxis, dedxAxis});
-    histos.add("event/signedtpcsignal", "", kTH2F, {pAxisPosNeg, dedxAxis});
 
     static_for<0, 8>([&](auto i) {
       addParticleHistos<i>(pAxis, ptAxis);
     });
   }
 
-  template <o2::track::PID::ID id2, typename T>
+  template <o2::track::PID::ID id, typename T>
   void fillParticleHistos(const T& t, const float& mom, const float& exp_diff, const float& expsigma)
   {
     if (applyRapidityCut) {
-      const float y = TMath::ASinH(t.pt() / TMath::Sqrt(PID::getMass2(id2) + t.pt() * t.pt()) * TMath::SinH(t.eta()));
+      const float y = TMath::ASinH(t.pt() / TMath::Sqrt(PID::getMass2(id) + t.pt() * t.pt()) * TMath::SinH(t.eta()));
       if (abs(y) > 0.5) {
         return;
       }
     }
     // Fill histograms
-    const auto& nsigma = o2::aod::pidutils::tpcNSigma(id2, t);
-    const auto& nsigmatof = o2::aod::pidutils::tofNSigma(id2, t);
+    const auto& nsigma = o2::aod::pidutils::tpcNSigma(id, t);
+    const auto& nsigmatof = o2::aod::pidutils::tofNSigma(id, t);
     if (std::abs(nsigmatof) < 3.f) {
-      histos.fill(HIST(hexpected[id2]), mom, t.tpcSignal() - exp_diff);
-      histos.fill(HIST(hexpected_diff[id2]), mom, exp_diff);
-      histos.fill(HIST(hexpsigma[id2]), t.p(), expsigma);
-      histos.fill(HIST(hnsigma[id2]), t.p(), nsigma);
-      histos.fill(HIST(hnsigmapt[id2]), t.pt(), nsigma);
+      histos.fill(HIST(hexpected[id]), mom, t.tpcSignal() - exp_diff);
+      histos.fill(HIST(hexpected_diff[id]), mom, exp_diff);
+      histos.fill(HIST(hexpsigma[id]), t.p(), expsigma);
+      histos.fill(HIST(hnsigma[id]), t.p(), nsigma);
+      histos.fill(HIST(hnsigmapt[id]), t.pt(), nsigma);
+      histos.fill(HIST(hsignal[id]), mom, t.tpcSignal());
+      // histos.fill(HIST("event/signedtpcsignal"), mom * t.sign(), t.tpcSignal());
     }
 
     if (std::sqrt(nsigma * nsigma + nsigmatof * nsigmatof) < 2) {
@@ -517,7 +520,7 @@ struct tpcPidFullQaWTof {
       histos.fill(HIST(hdcaz[id]), t.pt(), t.dcaZ());
     }
 
-    histos.fill(HIST(hnsigmatpctof[id2]), t.pt(), nsigma, nsigmatof);
+    // histos.fill(HIST(hnsigmatpctof[id]), t.pt(), nsigma, nsigmatof);
   }
 
   void process(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision,
@@ -563,11 +566,7 @@ struct tpcPidFullQaWTof {
       }
       // const float mom = t.p();
       const float mom = t.tpcInnerParam();
-      if (std::abs(o2::aod::pidutils::tofNSigma(id, t)) < 3.f) {
-        histos.fill(HIST("event/particlehypo"), t.pidForTracking());
-        histos.fill(HIST("event/tpcsignal"), mom, t.tpcSignal());
-        histos.fill(HIST("event/signedtpcsignal"), mom * t.sign(), t.tpcSignal());
-      }
+      histos.fill(HIST("event/particlehypo"), t.pidForTracking());
       //
       fillParticleHistos<PID::Electron>(t, mom, t.tpcExpSignalDiffEl(), t.tpcExpSigmaEl());
       fillParticleHistos<PID::Muon>(t, mom, t.tpcExpSignalDiffMu(), t.tpcExpSigmaMu());
@@ -589,10 +588,7 @@ WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
     workflow.push_back(adaptAnalysisTask<tpcPidFullQa>(cfgc));
   }
   if (1) {
-    workflow.push_back(adaptAnalysisTask<tpcPidFullQaWTof<PID::Electron>>(cfgc, TaskName{"tpc-pid-full-qa-w-tof-el"}));
-    workflow.push_back(adaptAnalysisTask<tpcPidFullQaWTof<PID::Pion>>(cfgc, TaskName{"tpc-pid-full-qa-w-tof-pi"}));
-    workflow.push_back(adaptAnalysisTask<tpcPidFullQaWTof<PID::Kaon>>(cfgc, TaskName{"tpc-pid-full-qa-w-tof-ka"}));
-    workflow.push_back(adaptAnalysisTask<tpcPidFullQaWTof<PID::Proton>>(cfgc, TaskName{"tpc-pid-full-qa-w-tof-pr"}));
+    workflow.push_back(adaptAnalysisTask<tpcPidFullQaWTof>(cfgc));
   }
   return workflow;
 }
