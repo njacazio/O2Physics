@@ -362,6 +362,11 @@ struct tofPidCollisionTimeQa { /// Task that checks the TOF collision time
     histos.add("withtof/mass", "mass", kTH1F, {massAxis});
     histos.add("withtof/tofSignalPerCollision", "tofSignalPerCollision", kTH2S, {collisionAxis, tofSignalAxis});
 
+    histos.add("withqualitycuts/p", "p", kTH1F, {pAxis});
+    histos.add("withqualitycuts/pt", "pt", kTH1F, {ptAxis});
+    histos.add("withqualitycuts/length", "length", kTH1F, {lengthAxis});
+    histos.add("withqualitycuts/mass", "mass", kTH1F, {massAxis});
+
     histos.add("goodforevtime/tofSignal", "tofSignal", kTH1F, {tofSignalAxis});
     histos.add("goodforevtime/p", "p", kTH1F, {pAxis});
     histos.add("goodforevtime/pt", "pt", kTH1F, {ptAxis});
@@ -400,6 +405,13 @@ struct tofPidCollisionTimeQa { /// Task that checks the TOF collision time
       histos.fill(HIST("withtof/expP"), t.p(), t.tofExpMom());
       histos.fill(HIST("withtof/mass"), mass);
       histos.fill(HIST("withtof/tofSignalPerCollision"), ncolls % 6000, t.tofSignal());
+      if (t.pt() > 0.3 && beta > 0.3) {
+        histos.fill(HIST("withqualitycuts/p"), t.p());
+        histos.fill(HIST("withqualitycuts/pt"), t.pt());
+        histos.fill(HIST("withqualitycuts/length"), t.length());
+        histos.fill(HIST("withqualitycuts/mass"), mass);
+      }
+
       if (!eventSet) {
         histos.fill(HIST("eventTime"), t.tofEvTime());
         if (t.tofEvTimeMult() > 1) {
@@ -562,11 +574,11 @@ struct tofPidFullQa {
     histos.fill(HIST("event/evsel"), 1);
     if (applyEvSel == 1) {
       if (!collision.sel7()) {
-      return;
+        return;
       }
     } else if (applyEvSel == 2) {
       if (!collision.sel8()) {
-      return;
+        return;
       }
     }
 
