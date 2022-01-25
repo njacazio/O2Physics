@@ -356,10 +356,6 @@ struct tpcPidFullQa {
     histos.fill(HIST("event/multiplicity"), ntracks);
 
     for (auto t : tracks) {
-      if (applyTrackCut && !t.isGlobalTrack()) {
-        continue;
-      }
-      // const float mom = t.p();
       const float mom = t.tpcInnerParam();
       if (t.isGlobalTrack()) {
         histos.fill(HIST("event/particlehypo"), t.pidForTracking());
