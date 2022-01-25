@@ -302,7 +302,7 @@ struct tpcPidFullQa {
         histos.fill(HIST(hdcaz[id]), t.pt(), t.dcaZ());
       }
     }
-    if (!t.isGlobalTrack()) {
+    if (applyTrackCut && !t.isGlobalTrack()) {
       return;
     }
     // Fill histograms
@@ -357,7 +357,7 @@ struct tpcPidFullQa {
 
     for (auto t : tracks) {
       const float mom = t.tpcInnerParam();
-      if (t.isGlobalTrack()) {
+      if (applyTrackCut && t.isGlobalTrack()) {
         histos.fill(HIST("event/particlehypo"), t.pidForTracking());
         histos.fill(HIST("event/tpcsignal"), mom, t.tpcSignal());
         histos.fill(HIST("event/signedtpcsignal"), mom * t.sign(), t.tpcSignal());
