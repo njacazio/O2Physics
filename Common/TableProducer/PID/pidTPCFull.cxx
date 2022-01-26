@@ -23,7 +23,6 @@
 //  // O2 includes
 #include "Framework/AnalysisTask.h"
 #include "Framework/HistogramRegistry.h"
-#include "Framework/RunningWorkflowInfo.h"
 #include "ReconstructionDataFormats/Track.h"
 #include <CCDB/BasicCCDBManager.h>
 #include "Common/Core/PID/PIDResponse.h"
@@ -51,7 +50,7 @@ void customize(std::vector<o2::framework::ConfigParamSpec>& workflowOptions)
 
 #include "Framework/runDataProcessing.h"
 
-/// Task to produce the TPC response table
+/// Task to produce the response table
 struct tpcPidFull {
   using Trks = soa::Join<aod::Tracks, aod::TracksExtra>;
   using Coll = soa::Join<aod::Collisions, aod::Mults>;
@@ -401,6 +400,9 @@ struct tpcPidFullQaWTof {
   static constexpr std::string_view hdcaxy[Np] = {"dcaxy/El", "dcaxy/Mu", "dcaxy/Pi",
                                                   "dcaxy/Ka", "dcaxy/Pr", "dcaxy/De",
                                                   "dcaxy/Tr", "dcaxy/He", "dcaxy/Al"};
+  static constexpr std::string_view hdcaxyphi[Np] = {"dcaxyphi/El", "dcaxyphi/Mu", "dcaxyphi/Pi",
+                                                     "dcaxyphi/Ka", "dcaxyphi/Pr", "dcaxyphi/De",
+                                                     "dcaxyphi/Tr", "dcaxyphi/He", "dcaxyphi/Al"};
   static constexpr std::string_view hdcaz[Np] = {"dcaz/El", "dcaz/Mu", "dcaz/Pi",
                                                  "dcaz/Ka", "dcaz/Pr", "dcaz/De",
                                                  "dcaz/Tr", "dcaz/He", "dcaz/Al"};
@@ -454,6 +456,8 @@ struct tpcPidFullQaWTof {
     // DCAxy
     const AxisSpec dcaXyAxis{600, -3.01, 2.99, "DCA_{xy} (cm)"};
     histos.add(hdcaxy[id].data(), axisTitle, kTH2F, {ptAxis, dcaXyAxis});
+    const AxisSpec phiAxis{nBinsP, 0, 7, "#it{#varphi} (rad)"};
+    histos.add(hdcaxyphi[id].data(), axisTitle, kTH2F, {phiAxis, dcaXyAxis});
     const AxisSpec dcaZAxis{600, -3.01, 2.99, "DCA_{z} (cm)"};
     histos.add(hdcaz[id].data(), axisTitle, kTH2F, {ptAxis, dcaZAxis});
   }
@@ -513,6 +517,7 @@ struct tpcPidFullQaWTof {
 
     if (std::sqrt(nsigma * nsigma + nsigmatof * nsigmatof) < 2) {
       histos.fill(HIST(hdcaxy[id]), t.pt(), t.dcaXY());
+      histos.fill(HIST(hdcaxyphi[id]), t.phi(), t.dcaXY());
       histos.fill(HIST(hdcaz[id]), t.pt(), t.dcaZ());
     }
 
