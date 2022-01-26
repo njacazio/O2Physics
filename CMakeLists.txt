@@ -66,7 +66,7 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Main targets of the project in various subdirectories. Order matters.
 add_subdirectory(Common)
-#add_subdirectory(ALICE3)
+add_subdirectory(ALICE3)
 add_subdirectory(DPG)
 
 #add_subdirectory(PWGCF)

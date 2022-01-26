@@ -517,7 +517,9 @@ struct tpcPidFullQaWTof {
 
     if (std::sqrt(nsigma * nsigma + nsigmatof * nsigmatof) < 2) {
       histos.fill(HIST(hdcaxy[id]), t.pt(), t.dcaXY());
-      histos.fill(HIST(hdcaxyphi[id]), t.phi(), t.dcaXY());
+      if (t.pt() < 1.1 && t.pt() > 0.9) {
+        histos.fill(HIST(hdcaxyphi[id]), t.phi(), t.dcaXY());
+      }
       histos.fill(HIST(hdcaz[id]), t.pt(), t.dcaZ());
     }
 
