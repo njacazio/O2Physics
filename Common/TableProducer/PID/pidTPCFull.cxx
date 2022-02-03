@@ -457,7 +457,7 @@ struct tpcPidFullQaWTof {
     const AxisSpec dcaXyAxis{600, -3.01, 2.99, "DCA_{xy} (cm)"};
     histos.add(hdcaxy[id].data(), axisTitle, kTH2F, {ptAxis, dcaXyAxis});
     const AxisSpec phiAxis{nBinsP, 0, 7, "#it{#varphi} (rad)"};
-    histos.add(hdcaxyphi[id].data(), axisTitle, kTH2F, {phiAxis, dcaXyAxis});
+    histos.add(hdcaxyphi[id].data(), Form("%s -- 0.9 < #it{p}_{T} < 1.1 GeV/#it{c}"), kTH2F, {phiAxis, dcaXyAxis});
     const AxisSpec dcaZAxis{600, -3.01, 2.99, "DCA_{z} (cm)"};
     histos.add(hdcaz[id].data(), axisTitle, kTH2F, {ptAxis, dcaZAxis});
   }
