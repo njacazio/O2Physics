@@ -439,11 +439,11 @@ struct tofPidFullQa {
         return;
       }
     }
-    const auto& nsigma = o2::aod::pidutils::tofNSigma(id, t);
-    const auto& diff = o2::aod::pidutils::tofExpSignalDiff(id, t);
+    const auto& nsigma = o2::aod::pidutils::tofNSigma<id>(t);
+    const auto& diff = o2::aod::pidutils::tofExpSignalDiff<id>(t);
     histos.fill(HIST(hexpected[id]), t.p(), tof - diff);
     histos.fill(HIST(hexpected_diff[id]), t.p(), diff);
-    histos.fill(HIST(hexpsigma[id]), t.p(), o2::aod::pidutils::tofExpSigma(id, t));
+    histos.fill(HIST(hexpsigma[id]), t.p(), o2::aod::pidutils::tofExpSigma<id>(t));
     histos.fill(HIST(hnsigma[id]), t.p(), nsigma);
     histos.fill(HIST(hnsigmapt[id]), t.pt(), nsigma);
     if (t.sign() > 0) {

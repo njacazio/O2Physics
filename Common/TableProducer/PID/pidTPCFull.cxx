@@ -298,8 +298,8 @@ struct tpcPidFullQa {
         return;
       }
     }
-    const auto& nsigma = o2::aod::pidutils::tpcNSigma(id, t);
-    const auto& diff = o2::aod::pidutils::tpcExpSignalDiff(id, t);
+    const auto& nsigma = o2::aod::pidutils::tpcNSigma<id>(t);
+    const auto& diff = o2::aod::pidutils::tpcExpSignalDiff<id>(t);
     if (globalTrackswoPrim.IsSelected(t)) {
       if (std::abs(nsigma) < 2) {
         histos.fill(HIST(hdcaxy[id]), t.pt(), t.dcaXY());
@@ -312,7 +312,7 @@ struct tpcPidFullQa {
     // Fill histograms
     histos.fill(HIST(hexpected[id]), mom, t.tpcSignal() - diff);
     histos.fill(HIST(hexpected_diff[id]), mom, diff);
-    histos.fill(HIST(hexpsigma[id]), t.p(), o2::aod::pidutils::tpcExpSigma(id, t));
+    histos.fill(HIST(hexpsigma[id]), t.p(), o2::aod::pidutils::tpcExpSigma<id>(t));
     histos.fill(HIST(hnsigma[id]), t.p(), nsigma);
     histos.fill(HIST(hnsigmapt[id]), t.pt(), nsigma);
     if (t.sign() > 0) {
