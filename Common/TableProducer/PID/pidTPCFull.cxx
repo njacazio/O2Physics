@@ -255,9 +255,10 @@ struct tpcPidFullQa {
 
     const AxisSpec multAxis{1000, 0.f, 1000.f, "Track multiplicity"};
     const AxisSpec vtxZAxis{100, -20, 20, "Vtx_{z} (cm)"};
+    const AxisSpec etaAxis{100, -2, 2, "#it{#eta}"};
     const AxisSpec pAxisPosNeg{nBinsP, -maxP, maxP, "Signed #it{p} (GeV/#it{c})"};
-    AxisSpec pAxis{nBinsP, minP, maxP, "#it{p} (GeV/#it{c})"};
     AxisSpec ptAxis{nBinsP, minP, maxP, "#it{p}_{T} (GeV/#it{c})"};
+    AxisSpec pAxis{nBinsP, minP, maxP, "#it{p} (GeV/#it{c})"};
     if (logAxis) {
       ptAxis.makeLogaritmic();
       pAxis.makeLogaritmic();
@@ -470,7 +471,7 @@ struct tpcPidFullQaWTof {
     const AxisSpec dcaXyAxis{600, -3.01, 2.99, "DCA_{xy} (cm)"};
     histos.add(hdcaxy[id].data(), axisTitle, kTH2F, {ptAxis, dcaXyAxis});
     const AxisSpec phiAxis{nBinsP, 0, 7, "#it{#varphi} (rad)"};
-    histos.add(hdcaxyphi[id].data(), Form("%s -- 0.9 < #it{p}_{T} < 1.1 GeV/#it{c}"), kTH2F, {phiAxis, dcaXyAxis});
+    histos.add(hdcaxyphi[id].data(), Form("%s -- 0.9 < #it{p}_{T} < 1.1 GeV/#it{c}", pT[id]), kTH2F, {phiAxis, dcaXyAxis});
     const AxisSpec dcaZAxis{600, -3.01, 2.99, "DCA_{z} (cm)"};
     histos.add(hdcaz[id].data(), axisTitle, kTH2F, {ptAxis, dcaZAxis});
   }
@@ -507,7 +508,7 @@ struct tpcPidFullQaWTof {
   }
 
   template <o2::track::PID::ID id, typename T>
-  void fillParticleHistos(const T& t, const float& mom, const float& exp_diff, const float& expsigma)
+  void fillParticleHistos(const T& t)
   {
     if (applyRapidityCut) {
       const float y = TMath::ASinH(t.pt() / TMath::Sqrt(PID::getMass2(id) + t.pt() * t.pt()) * TMath::SinH(t.eta()));
@@ -584,15 +585,15 @@ struct tpcPidFullQaWTof {
       const float mom = t.tpcInnerParam();
       histos.fill(HIST("event/particlehypo"), t.pidForTracking());
       //
-      fillParticleHistos<PID::Electron>(t, mom, t.tpcExpSignalDiffEl(), t.tpcExpSigmaEl());
-      fillParticleHistos<PID::Muon>(t, mom, t.tpcExpSignalDiffMu(), t.tpcExpSigmaMu());
-      fillParticleHistos<PID::Pion>(t, mom, t.tpcExpSignalDiffPi(), t.tpcExpSigmaPi());
-      fillParticleHistos<PID::Kaon>(t, mom, t.tpcExpSignalDiffKa(), t.tpcExpSigmaKa());
-      fillParticleHistos<PID::Proton>(t, mom, t.tpcExpSignalDiffPr(), t.tpcExpSigmaPr());
-      fillParticleHistos<PID::Deuteron>(t, mom, t.tpcExpSignalDiffDe(), t.tpcExpSigmaDe());
-      fillParticleHistos<PID::Triton>(t, mom, t.tpcExpSignalDiffTr(), t.tpcExpSigmaTr());
-      fillParticleHistos<PID::Helium3>(t, mom, t.tpcExpSignalDiffHe(), t.tpcExpSigmaHe());
-      fillParticleHistos<PID::Alpha>(t, mom, t.tpcExpSignalDiffAl(), t.tpcExpSigmaAl());
+      fillParticleHistos<PID::Electron>(t, mom);
+      fillParticleHistos<PID::Muon>(t, mom);
+      fillParticleHistos<PID::Pion>(t, mom);
+      fillParticleHistos<PID::Kaon>(t, mom);
+      fillParticleHistos<PID::Proton>(t, mom);
+      fillParticleHistos<PID::Deuteron>(t, mom);
+      fillParticleHistos<PID::Triton>(t, mom);
+      fillParticleHistos<PID::Helium3>(t, mom);
+      fillParticleHistos<PID::Alpha>(t, mom);
     }
   }
 };

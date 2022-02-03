@@ -505,7 +505,7 @@ struct tofPidFullQa {
 
     const float collisionTime_ps = collision.collisionTime() * 1000.f;
     histos.fill(HIST("event/colltime"), collisionTime_ps);
-    histos.fill(HIST("event/colltimereso"), mult, collision.collisionTimeRes() * 1000.f);
+    histos.fill(HIST("event/colltimereso"), tofmult, collision.collisionTimeRes() * 1000.f);
 
     for (auto t : tracks) {
       if (applyTrackCut && !t.isGlobalTrack()) {
