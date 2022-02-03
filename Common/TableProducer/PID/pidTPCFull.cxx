@@ -210,7 +210,7 @@ struct tpcPidFullQa {
   Configurable<int> nBinsNSigma{"nBinsNSigma", 200, "Number of bins for the NSigma"};
   Configurable<float> minNSigma{"minNSigma", -10.f, "Minimum NSigma in range"};
   Configurable<float> maxNSigma{"maxNSigma", 10.f, "Maximum NSigma in range"};
-  Configurable<int> applyEvSel{"applyEvSel", 0, "Flag to apply rapidity cut: 0 -> no event selection, 1 -> Run 2 event selection, 2 -> Run 3 event selection"};
+  Configurable<int> applyEvSel{"applyEvSel", 2, "Flag to apply rapidity cut: 0 -> no event selection, 1 -> Run 2 event selection, 2 -> Run 3 event selection"};
   Configurable<bool> applyTrackCut{"applyTrackCut", false, "Flag to apply standard track cuts"};
   Configurable<bool> applyRapidityCut{"applyRapidityCut", false, "Flag to apply rapidity cut"};
 
@@ -276,9 +276,13 @@ struct tpcPidFullQa {
     for (int i = 0; i < 9; i++) {
       h->GetXaxis()->SetBinLabel(i + 1, PID::getName(i));
     }
-    histos.add("event/multiplicity", "", kTH1F, {multAxis});
+    histos.add("event/trackmultiplicity", "", kTH1F, {multAxis});
     histos.add("event/tpcsignal", "", kTH2F, {pAxis, dedxAxis});
     histos.add("event/signedtpcsignal", "", kTH2F, {pAxisPosNeg, dedxAxis});
+    histos.add("event/eta", "", kTH1F, {etaAxis});
+    histos.add("event/length", "", kTH1F, {lAxis});
+    histos.add("event/pt", "", kTH1F, {ptAxis});
+    histos.add("event/p", "", kTH1F, {pAxis});
 
     static_for<0, 8>([&](auto i) {
       addParticleHistos<i>(pAxis, ptAxis);
@@ -286,7 +290,7 @@ struct tpcPidFullQa {
   }
 
   template <o2::track::PID::ID id, typename T>
-  void fillParticleHistos(const T& t, const float& mom, const float& exp_diff, const float& expsigma)
+  void fillParticleHistos(const T& t, const float& mom)
   {
     if (applyRapidityCut) {
       const float y = TMath::ASinH(t.pt() / TMath::Sqrt(PID::getMass2(id) + t.pt() * t.pt()) * TMath::SinH(t.eta()));
@@ -295,6 +299,7 @@ struct tpcPidFullQa {
       }
     }
     const auto& nsigma = o2::aod::pidutils::tpcNSigma(id, t);
+    const auto& diff = o2::aod::pidutils::tpcExpSignalDiff(id, t);
     if (globalTrackswoPrim.IsSelected(t)) {
       if (std::abs(nsigma) < 2) {
         histos.fill(HIST(hdcaxy[id]), t.pt(), t.dcaXY());
@@ -305,9 +310,9 @@ struct tpcPidFullQa {
       return;
     }
     // Fill histograms
-    histos.fill(HIST(hexpected[id]), mom, t.tpcSignal() - exp_diff);
-    histos.fill(HIST(hexpected_diff[id]), mom, exp_diff);
-    histos.fill(HIST(hexpsigma[id]), t.p(), expsigma);
+    histos.fill(HIST(hexpected[id]), mom, t.tpcSignal() - diff);
+    histos.fill(HIST(hexpected_diff[id]), mom, diff);
+    histos.fill(HIST(hexpsigma[id]), t.p(), o2::aod::pidutils::tpcExpSigma(id, t));
     histos.fill(HIST(hnsigma[id]), t.p(), nsigma);
     histos.fill(HIST(hnsigmapt[id]), t.pt(), nsigma);
     if (t.sign() > 0) {
@@ -317,13 +322,15 @@ struct tpcPidFullQa {
     }
   }
 
-  void process(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision,
-               soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
+  using Trks = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
                          aod::pidTPCFullEl, aod::pidTPCFullMu, aod::pidTPCFullPi,
                          aod::pidTPCFullKa, aod::pidTPCFullPr, aod::pidTPCFullDe,
                          aod::pidTPCFullTr, aod::pidTPCFullHe, aod::pidTPCFullAl,
-                         aod::TrackSelection> const& tracks)
+                         aod::TrackSelection>;
+  void process(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision,
+               Trks const& tracks)
   {
+
     histos.fill(HIST("event/evsel"), 1);
     if (applyEvSel == 1) {
       if (!collision.sel7()) {
@@ -334,8 +341,10 @@ struct tpcPidFullQa {
         return;
       }
     }
+
     histos.fill(HIST("event/evsel"), 2);
 
+    // Computing Multiplicity first
     float ntracks = 0;
     for (auto t : tracks) {
       if (applyTrackCut && !t.isGlobalTrack()) {
@@ -352,7 +361,7 @@ struct tpcPidFullQa {
     }
     histos.fill(HIST("event/evsel"), 4);
     histos.fill(HIST("event/vertexz"), collision.posZ());
-    histos.fill(HIST("event/multiplicity"), ntracks);
+    histos.fill(HIST("event/trackmultiplicity"), ntracks);
 
     for (auto t : tracks) {
       const float mom = t.tpcInnerParam();
@@ -360,6 +369,10 @@ struct tpcPidFullQa {
         histos.fill(HIST("event/particlehypo"), t.pidForTracking());
         histos.fill(HIST("event/tpcsignal"), mom, t.tpcSignal());
         histos.fill(HIST("event/signedtpcsignal"), mom * t.sign(), t.tpcSignal());
+        histos.fill(HIST("event/eta"), t.eta());
+        histos.fill(HIST("event/length"), t.length());
+        histos.fill(HIST("event/pt"), t.pt());
+        histos.fill(HIST("event/p"), t.p());
       }
       //
       fillParticleHistos<PID::Electron>(t, mom, t.tpcExpSignalDiffEl(), t.tpcExpSigmaEl());
@@ -486,7 +499,7 @@ struct tpcPidFullQaWTof {
     for (int i = 0; i < 9; i++) {
       h->GetXaxis()->SetBinLabel(i + 1, PID::getName(i));
     }
-    histos.add("event/multiplicity", "", kTH1F, {multAxis});
+    histos.add("event/trackmultiplicity", "", kTH1F, {multAxis});
 
     static_for<0, 8>([&](auto i) {
       addParticleHistos<i>(pAxis, ptAxis);
@@ -561,7 +574,7 @@ struct tpcPidFullQaWTof {
     }
     histos.fill(HIST("event/evsel"), 4);
     histos.fill(HIST("event/vertexz"), collision.posZ());
-    histos.fill(HIST("event/multiplicity"), ntracks);
+    histos.fill(HIST("event/trackmultiplicity"), ntracks);
 
     for (auto t : tracks) {
       if (applyTrackCut && !t.isGlobalTrack()) {
