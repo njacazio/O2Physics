@@ -256,6 +256,7 @@ struct tpcPidFullQa {
     const AxisSpec multAxis{1000, 0.f, 1000.f, "Track multiplicity"};
     const AxisSpec vtxZAxis{100, -20, 20, "Vtx_{z} (cm)"};
     const AxisSpec etaAxis{100, -2, 2, "#it{#eta}"};
+    const AxisSpec lAxis{100, 0, 500, "Track length (cm)"};
     const AxisSpec pAxisPosNeg{nBinsP, -maxP, maxP, "Signed #it{p} (GeV/#it{c})"};
     AxisSpec ptAxis{nBinsP, minP, maxP, "#it{p}_{T} (GeV/#it{c})"};
     AxisSpec pAxis{nBinsP, minP, maxP, "#it{p} (GeV/#it{c})"};
@@ -376,15 +377,15 @@ struct tpcPidFullQa {
         histos.fill(HIST("event/p"), t.p());
       }
       //
-      fillParticleHistos<PID::Electron>(t, mom, t.tpcExpSignalDiffEl(), t.tpcExpSigmaEl());
-      fillParticleHistos<PID::Muon>(t, mom, t.tpcExpSignalDiffMu(), t.tpcExpSigmaMu());
-      fillParticleHistos<PID::Pion>(t, mom, t.tpcExpSignalDiffPi(), t.tpcExpSigmaPi());
-      fillParticleHistos<PID::Kaon>(t, mom, t.tpcExpSignalDiffKa(), t.tpcExpSigmaKa());
-      fillParticleHistos<PID::Proton>(t, mom, t.tpcExpSignalDiffPr(), t.tpcExpSigmaPr());
-      fillParticleHistos<PID::Deuteron>(t, mom, t.tpcExpSignalDiffDe(), t.tpcExpSigmaDe());
-      fillParticleHistos<PID::Triton>(t, mom, t.tpcExpSignalDiffTr(), t.tpcExpSigmaTr());
-      fillParticleHistos<PID::Helium3>(t, mom, t.tpcExpSignalDiffHe(), t.tpcExpSigmaHe());
-      fillParticleHistos<PID::Alpha>(t, mom, t.tpcExpSignalDiffAl(), t.tpcExpSigmaAl());
+      fillParticleHistos<PID::Electron>(t, mom);
+      fillParticleHistos<PID::Muon>(t, mom);
+      fillParticleHistos<PID::Pion>(t, mom);
+      fillParticleHistos<PID::Kaon>(t, mom);
+      fillParticleHistos<PID::Proton>(t, mom);
+      fillParticleHistos<PID::Deuteron>(t, mom);
+      fillParticleHistos<PID::Triton>(t, mom);
+      fillParticleHistos<PID::Helium3>(t, mom);
+      fillParticleHistos<PID::Alpha>(t, mom);
     }
   }
 };
@@ -508,7 +509,7 @@ struct tpcPidFullQaWTof {
   }
 
   template <o2::track::PID::ID id, typename T>
-  void fillParticleHistos(const T& t)
+  void fillParticleHistos(const T& t, const float& mom)
   {
     if (applyRapidityCut) {
       const float y = TMath::ASinH(t.pt() / TMath::Sqrt(PID::getMass2(id) + t.pt() * t.pt()) * TMath::SinH(t.eta()));
@@ -519,10 +520,11 @@ struct tpcPidFullQaWTof {
     // Fill histograms
     const auto& nsigma = o2::aod::pidutils::tpcNSigma(id, t);
     const auto& nsigmatof = o2::aod::pidutils::tofNSigma(id, t);
+    const auto& diff = o2::aod::pidutils::tpcExpSignalDiff<id>(t);
     if (std::abs(nsigmatof) < 3.f) {
-      histos.fill(HIST(hexpected[id]), mom, t.tpcSignal() - exp_diff);
-      histos.fill(HIST(hexpected_diff[id]), mom, exp_diff);
-      histos.fill(HIST(hexpsigma[id]), t.p(), expsigma);
+      histos.fill(HIST(hexpected[id]), mom, t.tpcSignal() - diff);
+      histos.fill(HIST(hexpected_diff[id]), mom, diff);
+      histos.fill(HIST(hexpsigma[id]), t.p(), o2::aod::pidutils::tpcExpSigma<id>(t));
       histos.fill(HIST(hnsigma[id]), t.p(), nsigma);
       histos.fill(HIST(hnsigmapt[id]), t.pt(), nsigma);
       histos.fill(HIST(hsignal[id]), mom, t.tpcSignal());
