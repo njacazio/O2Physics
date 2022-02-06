@@ -388,6 +388,7 @@ struct tofPidFullQa {
     const AxisSpec vtxZAxis{100, -20, 20, "Vtx_{z} (cm)"};
     const AxisSpec tofAxis{10000, 0, 2e6, "TOF Signal (ps)"};
     const AxisSpec etaAxis{100, -2, 2, "#it{#eta}"};
+    const AxisSpec phiAxis{100, 0, 7, "#it{#phi}"};
     const AxisSpec colTimeAxis{100, -2000, 2000, "Collision time (ps)"};
     const AxisSpec colTimeResoAxis{100, 0, 1000, "#sigma_{Collision time} (ps)"};
     const AxisSpec lAxis{100, 0, 500, "Track length (cm)"};
@@ -420,6 +421,8 @@ struct tofPidFullQa {
     histos.add("event/tofsignal", "", kTH2F, {pAxis, tofAxis});
     histos.add("event/pexp", "", kTH2F, {pAxis, pExpAxis});
     histos.add("event/eta", "", kTH1F, {etaAxis});
+    histos.add("event/phi", "", kTH1F, {phiAxis});
+    histos.add("event/etaphi", "", kTH2F, {etaAxis, phiAxis});
     histos.add("event/length", "", kTH1F, {lAxis});
     histos.add("event/pt", "", kTH1F, {ptAxis});
     histos.add("event/p", "", kTH1F, {pAxis});
@@ -519,6 +522,8 @@ struct tofPidFullQa {
       histos.fill(HIST("event/tofsignal"), t.p(), t.tofSignal());
       histos.fill(HIST("event/pexp"), t.p(), t.tofExpMom());
       histos.fill(HIST("event/eta"), t.eta());
+      histos.fill(HIST("event/phi"), t.phi());
+      histos.fill(HIST("event/etaphi"), t.eta(), t.phi());
       histos.fill(HIST("event/length"), t.length());
       histos.fill(HIST("event/pt"), t.pt());
       histos.fill(HIST("event/p"), t.p());
