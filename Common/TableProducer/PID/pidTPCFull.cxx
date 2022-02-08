@@ -237,9 +237,9 @@ struct tpcPidFullQa {
     histos.add(hnsigmapospt[i].data(), axisTitle, kTH2F, {ptAxis, nSigmaAxis});
     histos.add(hnsigmanegpt[i].data(), axisTitle, kTH2F, {ptAxis, nSigmaAxis});
     // DCAxy
-    const AxisSpec dcaXyAxis{600, -3.01, 2.99, "DCA_{xy} (cm)"};
+    const AxisSpec dcaXyAxis{600, -3.005, 2.995, "DCA_{xy} (cm)"};
     histos.add(hdcaxy[i].data(), axisTitle, kTH2F, {ptAxis, dcaXyAxis});
-    const AxisSpec dcaZAxis{600, -3.01, 2.99, "DCA_{z} (cm)"};
+    const AxisSpec dcaZAxis{600, -3.005, 2.995, "DCA_{z} (cm)"};
     histos.add(hdcaz[i].data(), axisTitle, kTH2F, {ptAxis, dcaZAxis});
   }
 
