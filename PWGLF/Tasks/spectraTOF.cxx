@@ -23,6 +23,7 @@
 #include "Framework/HistogramRegistry.h"
 #include "Common/Core/PID/PIDResponse.h"
 #include "Common/DataModel/TrackSelectionTables.h"
+#include "Common/DataModel/EventSelection.h"
 #include "Common/Core/TrackSelection.h"
 #include "Common/Core/TrackSelectionDefaults.h"
 
@@ -57,6 +58,9 @@ struct tofSpectra {
   static constexpr std::string_view hdcaz[Np] = {"dcaz/El", "dcaz/Mu", "dcaz/Pi",
                                                  "dcaz/Ka", "dcaz/Pr", "dcaz/De",
                                                  "dcaz/Tr", "dcaz/He", "dcaz/Al"};
+  static constexpr std::string_view hdcaxyphi[Np] = {"dcaxyphi/El", "dcaxyphi/Mu", "dcaxyphi/Pi",
+                                                     "dcaxyphi/Ka", "dcaxyphi/Pr", "dcaxyphi/De",
+                                                     "dcaxyphi/Tr", "dcaxyphi/He", "dcaxyphi/Al"};
 
   TrackSelection globalTrackswoPrim; // Track without cut for primaries
 
@@ -76,7 +80,8 @@ struct tofSpectra {
     histos.add("event/vertexz", "", HistType::kTH1F, {vtxZAxis});
     auto h = histos.add<TH1>("evsel", "evsel", HistType::kTH1F, {{10, 0.5, 10.5}});
     h->GetXaxis()->SetBinLabel(1, "Events read");
-    h->GetXaxis()->SetBinLabel(2, "posZ passed");
+    h->GetXaxis()->SetBinLabel(2, "Ev. sel. passed");
+    h->GetXaxis()->SetBinLabel(3, "posZ passed");
     h = histos.add<TH1>("tracksel", "tracksel", HistType::kTH1F, {{10, 0.5, 10.5}});
     h->GetXaxis()->SetBinLabel(1, "Tracks read");
     h->GetXaxis()->SetBinLabel(2, "Eta passed");
@@ -97,10 +102,12 @@ struct tofSpectra {
 
     // DCAxy
     const AxisSpec dcaXyAxis{600, -3.005, 2.995, "DCA_{xy} (cm)"};
+    const AxisSpec phiAxis{200, 0, 7, "#it{#varphi} (rad)"};
     const AxisSpec dcaZAxis{600, -3.005, 2.995, "DCA_{z} (cm)"};
     for (int i = 0; i < Np; i++) {
       histos.add(hdcaxy[i].data(), pT[i], kTH2F, {ptAxis, dcaXyAxis});
       histos.add(hdcaz[i].data(), pT[i], kTH2F, {ptAxis, dcaZAxis});
+      histos.add(hdcaxyphi[i].data(), Form("%s -- 0.9 < #it{p}_{T} < 1.1 GeV/#it{c}", pT[i]), kTH2F, {phiAxis, dcaXyAxis});
     }
   }
 
@@ -115,6 +122,9 @@ struct tofSpectra {
     if (std::abs(nsigma) < 2) {
       histos.fill(HIST(hdcaxy[id]), track.pt(), track.dcaXY());
       histos.fill(HIST(hdcaz[id]), track.pt(), track.dcaZ());
+      if (track.pt() < 1.1 && track.pt() > 0.9) {
+        histos.fill(HIST(hdcaxyphi[id]), track.phi(), track.dcaXY());
+      }
     }
     if (!track.isGlobalTrack()) {
       return;
@@ -133,14 +143,21 @@ struct tofSpectra {
                                     aod::pidTOFbeta, aod::TOFSignal,
                                     aod::TrackSelection>;
 
-  void process(aod::Collision const& collision,
+  void process(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision,
                TrackCandidates const& tracks)
   {
     histos.fill(HIST("evsel"), 1);
-    if (abs(collision.posZ()) > cfgCutVertex) {
+    if (isRun2 && !collision.sel7()) {
+      return;
+
+    } else if (!collision.sel8()) {
       return;
     }
     histos.fill(HIST("evsel"), 2);
+    if (abs(collision.posZ()) > cfgCutVertex) {
+      return;
+    }
+    histos.fill(HIST("evsel"), 3);
     histos.fill(HIST("event/vertexz"), collision.posZ());
 
     for (const auto& track : tracks) {
