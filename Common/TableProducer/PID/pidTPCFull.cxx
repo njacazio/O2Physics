@@ -33,8 +33,6 @@
 #include "TableHelper.h"
 #include "Common/DataModel/EventSelection.h"
 #include "Framework/StaticFor.h"
-#include "Common/Core/TrackSelection.h"
-#include "Common/Core/TrackSelectionDefaults.h"
 
 using namespace o2;
 using namespace o2::framework;
@@ -383,18 +381,6 @@ struct tpcPidFullQaWTof {
   static constexpr std::string_view hnsigmapt[Np] = {"nsigmapt/El", "nsigmapt/Mu", "nsigmapt/Pi",
                                                      "nsigmapt/Ka", "nsigmapt/Pr", "nsigmapt/De",
                                                      "nsigmapt/Tr", "nsigmapt/He", "nsigmapt/Al"};
-  static constexpr std::string_view hnsigmatpctof[Np] = {"nsigmatpctof/El", "nsigmatpctof/Mu", "nsigmatpctof/Pi",
-                                                         "nsigmatpctof/Ka", "nsigmatpctof/Pr", "nsigmatpctof/De",
-                                                         "nsigmatpctof/Tr", "nsigmatpctof/He", "nsigmatpctof/Al"};
-  static constexpr std::string_view hdcaxy[Np] = {"dcaxy/El", "dcaxy/Mu", "dcaxy/Pi",
-                                                  "dcaxy/Ka", "dcaxy/Pr", "dcaxy/De",
-                                                  "dcaxy/Tr", "dcaxy/He", "dcaxy/Al"};
-  static constexpr std::string_view hdcaxyphi[Np] = {"dcaxyphi/El", "dcaxyphi/Mu", "dcaxyphi/Pi",
-                                                     "dcaxyphi/Ka", "dcaxyphi/Pr", "dcaxyphi/De",
-                                                     "dcaxyphi/Tr", "dcaxyphi/He", "dcaxyphi/Al"};
-  static constexpr std::string_view hdcaz[Np] = {"dcaz/El", "dcaz/Mu", "dcaz/Pi",
-                                                 "dcaz/Ka", "dcaz/Pr", "dcaz/De",
-                                                 "dcaz/Tr", "dcaz/He", "dcaz/Al"};
   static constexpr std::string_view hsignal[Np] = {"signal/El", "signal/Mu", "signal/Pi",
                                                    "signal/Ka", "signal/Pr", "signal/De",
                                                    "signal/Tr", "signal/He", "signal/Al"};
@@ -436,19 +422,10 @@ struct tpcPidFullQaWTof {
     // NSigma
     const char* axisTitle = Form("N_{#sigma}^{TPC}(%s)", pT[id]);
     const AxisSpec nSigmaAxis{nBinsNSigma, minNSigma, maxNSigma, axisTitle};
-    const AxisSpec nSigmaTOFAxis{nBinsNSigma, minNSigma, maxNSigma, Form("N_{#sigma}^{TOF}(%s)", pT[id])};
     histos.add(hnsigma[id].data(), axisTitle, kTH2F, {pAxis, nSigmaAxis});
     histos.add(hnsigmapt[id].data(), axisTitle, kTH2F, {ptAxis, nSigmaAxis});
-    // histos.add(hnsigmatpctof[id].data(), axisTitle, kTH3F, {ptAxis, nSigmaAxis, nSigmaTOFAxis});
     const AxisSpec dedxAxis{1000, 0, 1000, "d#it{E}/d#it{x} A.U."};
     histos.add(hsignal[id].data(), "", kTH2F, {pAxis, dedxAxis});
-    // DCAxy
-    const AxisSpec dcaXyAxis{600, -3.01, 2.99, "DCA_{xy} (cm)"};
-    histos.add(hdcaxy[id].data(), axisTitle, kTH2F, {ptAxis, dcaXyAxis});
-    const AxisSpec phiAxis{nBinsP, 0, 7, "#it{#varphi} (rad)"};
-    histos.add(hdcaxyphi[id].data(), Form("%s -- 0.9 < #it{p}_{T} < 1.1 GeV/#it{c}", pT[id]), kTH2F, {phiAxis, dcaXyAxis});
-    const AxisSpec dcaZAxis{600, -3.01, 2.99, "DCA_{z} (cm)"};
-    histos.add(hdcaz[id].data(), axisTitle, kTH2F, {ptAxis, dcaZAxis});
   }
 
   void init(o2::framework::InitContext&)
@@ -503,14 +480,6 @@ struct tpcPidFullQaWTof {
       histos.fill(HIST(hnsigmapt[id]), t.pt(), nsigma);
       histos.fill(HIST(hsignal[id]), mom, t.tpcSignal());
       // histos.fill(HIST("event/signedtpcsignal"), mom * t.sign(), t.tpcSignal());
-    }
-
-    if (std::sqrt(nsigma * nsigma + nsigmatof * nsigmatof) < 2) {
-      histos.fill(HIST(hdcaxy[id]), t.pt(), t.dcaXY());
-      if (t.pt() < 1.1 && t.pt() > 0.9) {
-        histos.fill(HIST(hdcaxyphi[id]), t.phi(), t.dcaXY());
-      }
-      histos.fill(HIST(hdcaz[id]), t.pt(), t.dcaZ());
     }
 
     // histos.fill(HIST(hnsigmatpctof[id]), t.pt(), nsigma, nsigmatof);

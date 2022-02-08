@@ -553,6 +553,10 @@ struct tofPidCollisionTimeQa {
   Configurable<float> rangeEvTimeReso{"rangeEvTimeReso", 1000.f, "Range in event time resolution"};
   Configurable<int> nBinsMultiplicity{"nBinsMultiplicity", 1000, "Number of bins for the multiplicity"};
   Configurable<float> rangeMultiplicity{"rangeMultiplicity", 1000.f, "Range in event time resolution"};
+  Configurable<int> logAxis{"logAxis", 0, "Flag to use a log momentum axis"};
+  Configurable<int> nBinsP{"nBinsP", 200, "Number of bins for the momentum"};
+  Configurable<float> minP{"minP", 0.1f, "Minimum momentum in range"};
+  Configurable<float> maxP{"maxP", 5.f, "Maximum momentum in range"};
 
   HistogramRegistry histos{"Histos", {}, OutputObjHandlingPolicy::QAObject};
   void init(o2::framework::InitContext& initContext)
@@ -561,9 +565,12 @@ struct tofPidCollisionTimeQa {
     const AxisSpec multAxis{nBinsEvTime, 0, rangeMultiplicity, "Track multiplicity for TOF event time"};
     const AxisSpec evTimeResoAxis{nBinsMultiplicity, 0, rangeEvTimeReso, "TOF event time resolution (ps)"};
     const AxisSpec tofSignalAxis{nBinsTofSignal, minTofSignal, maxTofSignal, "TOF signal (ps)"};
-    AxisSpec pAxis{1000, 0.01, 5, "#it{p} GeV/#it{c}"};
-    pAxis.makeLogaritmic();
-    const AxisSpec ptAxis{100, 0, 10, "#it{p}_{T} GeV/#it{c}"};
+    AxisSpec pAxis{nBinsP, minP, maxP, "#it{p} GeV/#it{c}"};
+    AxisSpec ptAxis{nBinsP, minP, maxP, "#it{p}_{T} GeV/#it{c}"};
+    if (logAxis) {
+      pAxis.makeLogaritmic();
+      ptAxis.makeLogaritmic();
+    }
     const AxisSpec collisionAxis{6000, -0.5f, 6000.f - .5f, "Collision index % 6000"};
     const AxisSpec massAxis{1000, 0, 3, "TOF mass (GeV/#it{c}^{2})"};
     const AxisSpec betaAxis{1000, 0, 1.5, "TOF #beta"};
