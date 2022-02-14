@@ -271,7 +271,7 @@ struct tpcPidFullQa {
   }
 
   template <o2::track::PID::ID id, typename T>
-  void fillParticleHistos(const T& t, const float& mom)
+  void fillParticleHistos(const T& t)
   {
     if (applyRapidityCut) {
       const float y = TMath::ASinH(t.pt() / TMath::Sqrt(PID::getMass2(id) + t.pt() * t.pt()) * TMath::SinH(t.eta()));
@@ -279,13 +279,14 @@ struct tpcPidFullQa {
         return;
       }
     }
+
     const auto& nsigma = o2::aod::pidutils::tpcNSigma<id>(t);
     const auto& diff = o2::aod::pidutils::tpcExpSignalDiff<id>(t);
 
     // Fill histograms
-    histos.fill(HIST(hexpected[id]), mom, t.tpcSignal() - diff);
-    histos.fill(HIST(hexpected_diff[id]), mom, diff);
-    histos.fill(HIST(hexpsigma[id]), t.p(), o2::aod::pidutils::tpcExpSigma<id>(t));
+    histos.fill(HIST(hexpected[id]), t.tpcInnerParam(), t.tpcSignal() - diff);
+    histos.fill(HIST(hexpected_diff[id]), t.tpcInnerParam(), diff);
+    histos.fill(HIST(hexpsigma[id]), t.tpcInnerParam(), o2::aod::pidutils::tpcExpSigma<id>(t));
     histos.fill(HIST(hnsigma[id]), t.p(), nsigma);
     histos.fill(HIST(hnsigmapt[id]), t.pt(), nsigma);
     if (t.sign() > 0) {
@@ -295,7 +296,7 @@ struct tpcPidFullQa {
     }
   }
 
-  using Trks = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
+  using Trks = soa::Join<aod::Tracks, aod::TracksExtra,
                          aod::pidTPCFullEl, aod::pidTPCFullMu, aod::pidTPCFullPi,
                          aod::pidTPCFullKa, aod::pidTPCFullPr, aod::pidTPCFullDe,
                          aod::pidTPCFullTr, aod::pidTPCFullHe, aod::pidTPCFullAl,
@@ -340,24 +341,23 @@ struct tpcPidFullQa {
       if (applyTrackCut && !t.isGlobalTrack()) {
         continue;
       }
-      const float mom = t.tpcInnerParam();
       histos.fill(HIST("event/particlehypo"), t.pidForTracking());
-      histos.fill(HIST("event/tpcsignal"), mom, t.tpcSignal());
-      histos.fill(HIST("event/signedtpcsignal"), mom * t.sign(), t.tpcSignal());
+      histos.fill(HIST("event/tpcsignal"), t.tpcInnerParam(), t.tpcSignal());
+      histos.fill(HIST("event/signedtpcsignal"), t.tpcInnerParam() * t.sign(), t.tpcSignal());
       histos.fill(HIST("event/eta"), t.eta());
       histos.fill(HIST("event/length"), t.length());
       histos.fill(HIST("event/pt"), t.pt());
       histos.fill(HIST("event/p"), t.p());
       //
-      fillParticleHistos<PID::Electron>(t, mom);
-      fillParticleHistos<PID::Muon>(t, mom);
-      fillParticleHistos<PID::Pion>(t, mom);
-      fillParticleHistos<PID::Kaon>(t, mom);
-      fillParticleHistos<PID::Proton>(t, mom);
-      fillParticleHistos<PID::Deuteron>(t, mom);
-      fillParticleHistos<PID::Triton>(t, mom);
-      fillParticleHistos<PID::Helium3>(t, mom);
-      fillParticleHistos<PID::Alpha>(t, mom);
+      fillParticleHistos<PID::Electron>(t);
+      fillParticleHistos<PID::Muon>(t);
+      fillParticleHistos<PID::Pion>(t);
+      fillParticleHistos<PID::Kaon>(t);
+      fillParticleHistos<PID::Proton>(t);
+      fillParticleHistos<PID::Deuteron>(t);
+      fillParticleHistos<PID::Triton>(t);
+      fillParticleHistos<PID::Helium3>(t);
+      fillParticleHistos<PID::Alpha>(t);
     }
   }
 };
@@ -481,8 +481,6 @@ struct tpcPidFullQaWTof {
       histos.fill(HIST(hsignal[id]), mom, t.tpcSignal());
       // histos.fill(HIST("event/signedtpcsignal"), mom * t.sign(), t.tpcSignal());
     }
-
-    // histos.fill(HIST(hnsigmatpctof[id]), t.pt(), nsigma, nsigmatof);
   }
 
   void process(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision,
