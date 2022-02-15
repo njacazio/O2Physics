@@ -155,7 +155,6 @@ struct tpcPid {
                                                                   aod::pidtpc_tiny::bin_width);
         }
       }
-      table.reserve(tracks.size());
     };
     makeTable(pidEl, tablePIDEl, o2::track::PID::Electron);
     makeTable(pidMu, tablePIDMu, o2::track::PID::Muon);
