@@ -134,7 +134,7 @@ struct tofSpectra {
   void init(o2::framework::InitContext&)
   {
     globalTrackswoPrim = getGlobalTrackSelection();
-    globalTrackswoPrim.SetMaxDcaXYPtDep([](float pt) { return 3.f + pt; });
+    globalTrackswoPrim.SetMaxDcaXYPtDep([](float pt) { return 3.f; });
     globalTrackswoPrim.SetRequireGoldenChi2(false);
     if (!isRun2) {
       globalTrackswoPrim.SetTrackType(o2::aod::track::TrackTypeEnum::Track);
