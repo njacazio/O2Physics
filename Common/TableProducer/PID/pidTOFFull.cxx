@@ -387,8 +387,8 @@ struct tofPidFullQa {
     const AxisSpec multAxis{100, 0, 100, "TOF multiplicity"};
     const AxisSpec vtxZAxis{100, -20, 20, "Vtx_{z} (cm)"};
     const AxisSpec tofAxis{10000, 0, 2e6, "TOF Signal (ps)"};
-    const AxisSpec etaAxis{100, -2, 2, "#it{#eta}"};
-    const AxisSpec phiAxis{100, 0, 7, "#it{#phi}"};
+    const AxisSpec etaAxis{100, -1, 1, "#it{#eta}"};
+    const AxisSpec phiAxis{100, 0, TMath::TwoPi(), "#it{#phi}"};
     const AxisSpec colTimeAxis{100, -2000, 2000, "Collision time (ps)"};
     const AxisSpec colTimeResoAxis{100, 0, 1000, "#sigma_{Collision time} (ps)"};
     const AxisSpec lAxis{100, 0, 500, "Track length (cm)"};
@@ -550,9 +550,10 @@ struct tofPidCollisionTimeQa {
   Configurable<int> nBinsTofSignal{"nBinsTofSignal", 5000, "Number of bins for the tof signal time"};
   Configurable<float> minTofSignal{"minTofSignal", 0.f, "Minimum in range in tof signal time"};
   Configurable<float> maxTofSignal{"maxTofSignal", 100e3, "Maximum in range in tof signal time"};
+  Configurable<int> nBinsEvTimeReso{"nBinsEvTimeReso", 1000, "Number of bins in event time resolution"};
   Configurable<float> rangeEvTimeReso{"rangeEvTimeReso", 1000.f, "Range in event time resolution"};
   Configurable<int> nBinsMultiplicity{"nBinsMultiplicity", 1000, "Number of bins for the multiplicity"};
-  Configurable<float> rangeMultiplicity{"rangeMultiplicity", 1000.f, "Range in event time resolution"};
+  Configurable<float> rangeMultiplicity{"rangeMultiplicity", 1000.f, "Range for the multiplicity"};
   Configurable<int> logAxis{"logAxis", 0, "Flag to use a log momentum axis"};
   Configurable<int> nBinsP{"nBinsP", 200, "Number of bins for the momentum"};
   Configurable<float> minP{"minP", 0.1f, "Minimum momentum in range"};
@@ -563,7 +564,7 @@ struct tofPidCollisionTimeQa {
   {
     const AxisSpec evTimeAxis{nBinsEvTime, minEvTime, maxEvTime, "TOF event time (ps)"};
     const AxisSpec multAxis{nBinsEvTime, 0, rangeMultiplicity, "Track multiplicity for TOF event time"};
-    const AxisSpec evTimeResoAxis{nBinsMultiplicity, 0, rangeEvTimeReso, "TOF event time resolution (ps)"};
+    const AxisSpec evTimeResoAxis{nBinsEvTimeReso, 0, rangeEvTimeReso, "TOF event time resolution (ps)"};
     const AxisSpec tofSignalAxis{nBinsTofSignal, minTofSignal, maxTofSignal, "TOF signal (ps)"};
     AxisSpec pAxis{nBinsP, minP, maxP, "#it{p} GeV/#it{c}"};
     AxisSpec ptAxis{nBinsP, minP, maxP, "#it{p}_{T} GeV/#it{c}"};
@@ -579,11 +580,12 @@ struct tofPidCollisionTimeQa {
 
     histos.add("eventSelection", "eventSelection", kTH1F, {{10, 0, 10}});
     histos.add("eventTime", "eventTime", kTH1F, {evTimeAxis});
-    histos.add("eventTimeM", "eventTimeM", kTH1F, {evTimeAxis});
     histos.add("eventTimeReso", "eventTimeReso", kTH1F, {evTimeResoAxis});
     histos.add("eventTimeMult", "eventTimeMult", kTH1F, {multAxis});
-    histos.add("collisionTime", "collisionTime", kTH1F, {evTimeResoAxis});
-    histos.add("collisionTimeRes", "collisionTimeRes", kTH1F, {evTimeResoAxis});
+    histos.add("eventTimeVsMult", "eventTimeVsMult", kTH2F, {multAxis, evTimeAxis});
+    histos.add("eventTimeResoVsMult", "eventTimeResoVsMult", kTH2F, {multAxis, evTimeResoAxis});
+    histos.add<TH1>("collisionTime", "collisionTime", kTH1F, {evTimeResoAxis})->GetXaxis()->SetTitle("Collision time (ps)");
+    histos.add<TH1>("collisionTimeRes", "collisionTimeRes", kTH1F, {evTimeResoAxis})->GetXaxis()->SetTitle("Collision time resolution (ps)");
 
     histos.add("tracks/p", "p", kTH1F, {pAxis});
     histos.add("tracks/pt", "pt", kTH1F, {ptAxis});
@@ -651,11 +653,11 @@ struct tofPidCollisionTimeQa {
 
       if (!eventSet) {
         histos.fill(HIST("eventTime"), t.tofEvTime());
-        if (t.tofEvTimeMult() > 1) {
-          histos.fill(HIST("eventTimeM"), t.tofEvTime());
-        }
         histos.fill(HIST("eventTimeReso"), t.tofEvTimeErr());
         histos.fill(HIST("eventTimeMult"), t.tofEvTimeMult());
+        histos.fill(HIST("eventTimeVsMult"), t.tofEvTimeMult(), t.tofEvTime());
+        histos.fill(HIST("eventTimeResoVsMult"), t.tofEvTimeMult(), t.tofEvTimeErr());
+
         histos.fill(HIST("collisionTime"), t.collision().collisionTime());
         histos.fill(HIST("collisionTimeRes"), t.collision().collisionTimeRes());
         eventSet = true;
