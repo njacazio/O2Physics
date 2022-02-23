@@ -578,7 +578,9 @@ struct tofPidCollisionTimeQa {
     const AxisSpec deltaAxis{1000, -10000, 10000, "t-texp-t0"};
     const AxisSpec lengthAxis{1000, 0, 600, "Track length (cm)"};
 
-    histos.add("eventSelection", "eventSelection", kTH1F, {{10, 0, 10}});
+    auto h = histos.add<TH1>("eventSelection", "eventSelection", kTH1F, {{10, 0, 10, "Cut passed"}});
+    h->GetXaxis()->SetBinLabel(1, "Events read");
+    h->GetXaxis()->SetBinLabel(2, "Event selection");
     histos.add("eventTime", "eventTime", kTH1F, {evTimeAxis});
     histos.add("eventTimeReso", "eventTimeReso", kTH1F, {evTimeResoAxis});
     histos.add("eventTimeMult", "eventTimeMult", kTH1F, {multAxis});
@@ -601,10 +603,25 @@ struct tofPidCollisionTimeQa {
     histos.add("withtof/mass", "mass", kTH1F, {massAxis});
     histos.add("withtof/tofSignalPerCollision", "tofSignalPerCollision", kTH2S, {collisionAxis, tofSignalAxis});
 
-    histos.add("withqualitycuts/p", "p", kTH1F, {pAxis});
-    histos.add("withqualitycuts/pt", "pt", kTH1F, {ptAxis});
-    histos.add("withqualitycuts/length", "length", kTH1F, {lengthAxis});
-    histos.add("withqualitycuts/mass", "mass", kTH1F, {massAxis});
+    histos.add("goodreso/p", "p", kTH1F, {pAxis});
+    histos.add("goodreso/pt", "pt", kTH1F, {ptAxis});
+    histos.add("goodreso/length", "length", kTH1F, {lengthAxis});
+    histos.add("goodreso/tofSignal", "tofSignal", kTH1F, {tofSignalAxis});
+    histos.add("goodreso/beta", "beta", kTH2F, {pAxis, betaAxis});
+    histos.add("goodreso/delta", "delta", kTH2F, {pAxis, deltaAxis});
+    histos.add("goodreso/expP", "expP", kTH2F, {pAxis, pAxis});
+    histos.add("goodreso/mass", "mass", kTH1F, {massAxis});
+    histos.add("goodreso/tofSignalPerCollision", "tofSignalPerCollision", kTH2S, {collisionAxis, tofSignalAxis});
+
+    histos.add("badreso/p", "p", kTH1F, {pAxis});
+    histos.add("badreso/pt", "pt", kTH1F, {ptAxis});
+    histos.add("badreso/length", "length", kTH1F, {lengthAxis});
+    histos.add("badreso/tofSignal", "tofSignal", kTH1F, {tofSignalAxis});
+    histos.add("badreso/beta", "beta", kTH2F, {pAxis, betaAxis});
+    histos.add("badreso/delta", "delta", kTH2F, {pAxis, deltaAxis});
+    histos.add("badreso/expP", "expP", kTH2F, {pAxis, pAxis});
+    histos.add("badreso/mass", "mass", kTH1F, {massAxis});
+    histos.add("badreso/tofSignalPerCollision", "tofSignalPerCollision", kTH2S, {collisionAxis, tofSignalAxis});
 
     histos.add("goodforevtime/tofSignal", "tofSignal", kTH1F, {tofSignalAxis});
     histos.add("goodforevtime/p", "p", kTH1F, {pAxis});
@@ -615,6 +632,11 @@ struct tofPidCollisionTimeQa {
     histos.add("goodforevtime/expP", "expP", kTH2F, {pAxis, pAxis});
     histos.add("goodforevtime/mass", "mass", kTH1F, {massAxis});
     histos.add("goodforevtime/tofSignalPerCollision", "tofSignalPerCollision", kTH2S, {collisionAxis, tofSignalAxis});
+
+    histos.add("withqualitycuts/p", "p", kTH1F, {pAxis});
+    histos.add("withqualitycuts/pt", "pt", kTH1F, {ptAxis});
+    histos.add("withqualitycuts/length", "length", kTH1F, {lengthAxis});
+    histos.add("withqualitycuts/mass", "mass", kTH1F, {massAxis});
   }
 
   using Trks = soa::Join<aod::Tracks, aod::TracksExtra, aod::TOFSignal, aod::TOFEvTime, aod::TrackSelection>;
@@ -649,6 +671,28 @@ struct tofPidCollisionTimeQa {
         histos.fill(HIST("withqualitycuts/pt"), t.pt());
         histos.fill(HIST("withqualitycuts/length"), t.length());
         histos.fill(HIST("withqualitycuts/mass"), mass);
+      }
+
+      if (t.tofEvTimeErr() > 199.f) {
+        histos.fill(HIST("badreso/p"), t.p());
+        histos.fill(HIST("badreso/pt"), t.pt());
+        histos.fill(HIST("badreso/length"), t.length());
+        histos.fill(HIST("badreso/tofSignal"), t.tofSignal());
+        histos.fill(HIST("badreso/beta"), t.p(), beta);
+        histos.fill(HIST("badreso/delta"), t.p(), t.tofSignal() - t.tofEvTime() - o2::pid::tof::ExpTimes<Trks::iterator, PID::Pion>::GetExpectedSignal(t));
+        histos.fill(HIST("badreso/expP"), t.p(), t.tofExpMom());
+        histos.fill(HIST("badreso/mass"), mass);
+        histos.fill(HIST("badreso/tofSignalPerCollision"), ncolls % 6000, t.tofSignal());
+      } else {
+        histos.fill(HIST("goodreso/p"), t.p());
+        histos.fill(HIST("goodreso/pt"), t.pt());
+        histos.fill(HIST("goodreso/length"), t.length());
+        histos.fill(HIST("goodreso/tofSignal"), t.tofSignal());
+        histos.fill(HIST("goodreso/beta"), t.p(), beta);
+        histos.fill(HIST("goodreso/delta"), t.p(), t.tofSignal() - t.tofEvTime() - o2::pid::tof::ExpTimes<Trks::iterator, PID::Pion>::GetExpectedSignal(t));
+        histos.fill(HIST("goodreso/expP"), t.p(), t.tofExpMom());
+        histos.fill(HIST("goodreso/mass"), mass);
+        histos.fill(HIST("goodreso/tofSignalPerCollision"), ncolls % 6000, t.tofSignal());
       }
 
       if (!eventSet) {
