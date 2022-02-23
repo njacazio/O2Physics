@@ -605,6 +605,7 @@ struct tofPidCollisionTimeQa {
 
     histos.add("goodreso/p", "p", kTH1F, {pAxis});
     histos.add("goodreso/pt", "pt", kTH1F, {ptAxis});
+    histos.add("goodreso/ptden", "ptden", kTH1F, {ptAxis});
     histos.add("goodreso/length", "length", kTH1F, {lengthAxis});
     histos.add("goodreso/tofSignal", "tofSignal", kTH1F, {tofSignalAxis});
     histos.add("goodreso/beta", "beta", kTH2F, {pAxis, betaAxis});
@@ -615,6 +616,7 @@ struct tofPidCollisionTimeQa {
 
     histos.add("badreso/p", "p", kTH1F, {pAxis});
     histos.add("badreso/pt", "pt", kTH1F, {ptAxis});
+    histos.add("badreso/ptden", "ptden", kTH1F, {ptAxis});
     histos.add("badreso/length", "length", kTH1F, {lengthAxis});
     histos.add("badreso/tofSignal", "tofSignal", kTH1F, {tofSignalAxis});
     histos.add("badreso/beta", "beta", kTH2F, {pAxis, betaAxis});
@@ -652,6 +654,13 @@ struct tofPidCollisionTimeQa {
       histos.fill(HIST("tracks/p"), t.p());
       histos.fill(HIST("tracks/pt"), t.pt());
       histos.fill(HIST("tracks/length"), t.length());
+
+      if (t.tofEvTimeErr() > 199.f) {
+        histos.fill(HIST("badreso/ptden"), t.pt());
+      } else {
+        histos.fill(HIST("goodreso/ptden"), t.pt());
+      }
+
       if (!t.hasTOF()) {
         continue;
       }
