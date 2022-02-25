@@ -362,15 +362,15 @@ struct tofPidFullQa {
   void addParticleHistos(const AxisSpec& pAxis, const AxisSpec& ptAxis)
   {
     // Exp signal
-    const AxisSpec expAxis{1000, 0, 2e6, Form("t_{exp}(%s)", pT[i])};
+    const AxisSpec expAxis{1000, 0, 2e6, Form("t_{exp}(%s) (ps)", pT[i])};
     histos.add(hexpected[i].data(), "", kTH2F, {pAxis, expAxis});
 
     // Signal - Expected signal
-    const AxisSpec deltaAxis{nBinsDelta, minDelta, maxDelta, Form("(t-t_{evt}-t_{exp}(%s))", pT[i])};
+    const AxisSpec deltaAxis{nBinsDelta, minDelta, maxDelta, Form("t-t_{ev}-t_{exp}(%s) (ps)", pT[i])};
     histos.add(hexpected_diff[i].data(), "", kTH2F, {pAxis, deltaAxis});
 
     // Exp Sigma
-    const AxisSpec expSigmaAxis{nBinsExpSigma, minExpSigma, maxExpSigma, Form("Exp_{#sigma}^{TOF}(%s)", pT[i])};
+    const AxisSpec expSigmaAxis{nBinsExpSigma, minExpSigma, maxExpSigma, Form("Exp_{#sigma}^{TOF}(%s) (ps)", pT[i])};
     histos.add(hexpsigma[i].data(), "", kTH2F, {pAxis, expSigmaAxis});
 
     // NSigma
@@ -575,12 +575,20 @@ struct tofPidCollisionTimeQa {
     const AxisSpec collisionAxis{6000, -0.5f, 6000.f - .5f, "Collision index % 6000"};
     const AxisSpec massAxis{1000, 0, 3, "TOF mass (GeV/#it{c}^{2})"};
     const AxisSpec betaAxis{1000, 0, 1.5, "TOF #beta"};
-    const AxisSpec deltaAxis{1000, -10000, 10000, "t-texp-t0"};
+    const AxisSpec deltaAxis{1000, -10000, 10000, "t-t_{ev}-t_{exp}(#pi) (ps)"};
     const AxisSpec lengthAxis{1000, 0, 600, "Track length (cm)"};
 
     auto h = histos.add<TH1>("eventSelection", "eventSelection", kTH1F, {{10, 0, 10, "Cut passed"}});
     h->GetXaxis()->SetBinLabel(1, "Events read");
     h->GetXaxis()->SetBinLabel(2, "Event selection");
+    h->GetXaxis()->SetBinLabel(3, "#sigma_{Ev. time} < 200 ps");
+    h->GetXaxis()->SetBinLabel(4, "#sigma_{Ev. time} > 200 ps");
+    h = histos.add<TH1>("trackSelection", "trackSelection", kTH1F, {{10, 0, 10, "Cut passed"}});
+    h->GetXaxis()->SetBinLabel(1, "Tracks read");
+    h->GetXaxis()->SetBinLabel(2, "Track selection");
+    h->GetXaxis()->SetBinLabel(3, "hasITS");
+    h->GetXaxis()->SetBinLabel(4, "hasTPC");
+    h->GetXaxis()->SetBinLabel(5, "hasTOF");
     histos.add("eventTime", "eventTime", kTH1F, {evTimeAxis});
     histos.add("eventTimeReso", "eventTimeReso", kTH1F, {evTimeResoAxis});
     histos.add("eventTimeMult", "eventTimeMult", kTH1F, {multAxis});
@@ -646,11 +654,25 @@ struct tofPidCollisionTimeQa {
   void process(aod::Collision const&, Trks const& tracks)
   {
     histos.fill(HIST("eventSelection"), 0.5f);
+    histos.fill(HIST("eventSelection"), 1.5f);
     bool eventSet = false;
     for (auto& t : tracks) {
+      histos.fill(HIST("trackSelection"), 0.5f);
+
       if (!t.isGlobalTrack()) {
         continue;
       }
+      histos.fill(HIST("trackSelection"), 1.5f);
+
+      if (!t.hasITS()) {
+        continue;
+      }
+      histos.fill(HIST("trackSelection"), 2.5f);
+      if (!t.hasTPC()) {
+        continue;
+      }
+      histos.fill(HIST("trackSelection"), 3.5f);
+
       histos.fill(HIST("tracks/p"), t.p());
       histos.fill(HIST("tracks/pt"), t.pt());
       histos.fill(HIST("tracks/length"), t.length());
@@ -664,6 +686,8 @@ struct tofPidCollisionTimeQa {
       if (!t.hasTOF()) {
         continue;
       }
+      histos.fill(HIST("trackSelection"), 4.5f);
+
       const float beta = o2::pid::tof::Beta<Trks::iterator>::GetBeta(t, t.tofEvTime());
       const float mass = o2::pid::tof::TOFMass<Trks::iterator>::GetTOFMass(t.p(), beta);
       histos.fill(HIST("withtof/p"), t.p());
@@ -705,6 +729,11 @@ struct tofPidCollisionTimeQa {
       }
 
       if (!eventSet) {
+        if (t.tofEvTimeErr() > 199.f) {
+          histos.fill(HIST("eventSelection"), 2.5f);
+        } else {
+          histos.fill(HIST("eventSelection"), 3.5f);
+        }
         histos.fill(HIST("eventTime"), t.tofEvTime());
         histos.fill(HIST("eventTimeReso"), t.tofEvTimeErr());
         histos.fill(HIST("eventTimeMult"), t.tofEvTimeMult());
