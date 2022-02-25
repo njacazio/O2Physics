@@ -30,6 +30,12 @@
 #include "Framework/StaticFor.h"
 #include "TOFBase/EventTimeMaker.h"
 #include "pidTOFBase.h"
+#include "Common/Core/trackUtilities.h"
+#include "ReconstructionDataFormats/DCA.h"
+#include "DetectorsBase/Propagator.h"
+#include "DetectorsBase/GeometryManager.h"
+#include "CommonUtils/NameConf.h"
+#include "DataFormatsParameters/GRPObject.h"
 
 using namespace o2;
 using namespace o2::framework;
@@ -357,6 +363,7 @@ struct tofPidFullQa {
   Configurable<int> applyEvSel{"applyEvSel", 2, "Flag to apply rapidity cut: 0 -> no event selection, 1 -> Run 2 event selection, 2 -> Run 3 event selection"};
   Configurable<bool> applyTrackCut{"applyTrackCut", false, "Flag to apply standard track cuts"};
   Configurable<bool> applyRapidityCut{"applyRapidityCut", false, "Flag to apply rapidity cut"};
+  Configurable<bool> doEtaPhiMap{"doEtaPhiMap", true, "Flag to do Eta-Phi at TOF map"};
 
   template <uint8_t i>
   void addParticleHistos(const AxisSpec& pAxis, const AxisSpec& ptAxis)
@@ -423,6 +430,9 @@ struct tofPidFullQa {
     histos.add("event/eta", "", kTH1F, {etaAxis});
     histos.add("event/phi", "", kTH1F, {phiAxis});
     histos.add("event/etaphi", "", kTH2F, {etaAxis, phiAxis});
+    if (doEtaPhiMap) {
+      histos.add("event/etaphiout", "", kTH2F, {etaAxis, phiAxis});
+    }
     histos.add("event/length", "", kTH1F, {lAxis});
     histos.add("event/pt", "", kTH1F, {ptAxis});
     histos.add("event/p", "", kTH1F, {pAxis});
@@ -431,7 +441,14 @@ struct tofPidFullQa {
     static_for<0, 8>([&](auto i) {
       addParticleHistos<i>(pAxis, ptAxis);
     });
+    ccdb->setURL("http://alice-ccdb.cern.ch");
+    ccdb->setCaching(true);
+    ccdb->setLocalObjectValidityChecking();
+
+    lut = o2::base::MatLayerCylSet::rectifyPtrFromFile(ccdb->get<o2::base::MatLayerCylSet>("GLO/Param/MatLUT"));
   }
+  o2::base::MatLayerCylSet* lut;
+  Service<o2::ccdb::BasicCCDBManager> ccdb;
 
   template <o2::track::PID::ID id, typename T>
   void fillParticleHistos(const T& t, const float& tof)
@@ -456,14 +473,16 @@ struct tofPidFullQa {
     }
   }
 
+  int mRunNumber = 0;
   using Trks = soa::Join<aod::Tracks, aod::TracksExtra,
                          aod::pidTOFFullEl, aod::pidTOFFullMu, aod::pidTOFFullPi,
                          aod::pidTOFFullKa, aod::pidTOFFullPr, aod::pidTOFFullDe,
                          aod::pidTOFFullTr, aod::pidTOFFullHe, aod::pidTOFFullAl,
                          aod::TOFSignal, aod::TrackSelection>;
   void process(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision,
-               Trks const& tracks)
+               Trks const& tracks, aod::BCsWithTimestamps const&)
   {
+    o2::base::Propagator::MatCorrType matCorr = o2::base::Propagator::MatCorrType::USEMatCorrLUT;
 
     histos.fill(HIST("event/evsel"), 1);
     if (applyEvSel == 1) {
@@ -517,6 +536,32 @@ struct tofPidFullQa {
       if (!t.hasTOF()) { // Skipping tracks without TOF
         continue;
       }
+
+      // Computing phi out
+      if (doEtaPhiMap && t.has_collision()) {
+        auto bc = t.collision_as<soa::Join<aod::Collisions, aod::EvSels>>().bc_as<aod::BCsWithTimestamps>();
+        if (mRunNumber != bc.runNumber()) {
+          auto grpo = ccdb->getForTimeStamp<o2::parameters::GRPObject>("GLO/GRP/GRP", bc.timestamp());
+          if (grpo != nullptr) {
+            o2::base::Propagator::initFieldFromGRP(grpo);
+            o2::base::Propagator::Instance()->setMatLUT(lut);
+          } else {
+            LOGF(fatal, "GRP object is not available in CCDB for run=%d at timestamp=%llu", bc.runNumber(), bc.timestamp());
+          }
+          mRunNumber = bc.runNumber();
+        }
+
+        auto trackPar = getTrackPar(t);
+        // auto const& collision = t.collision();
+
+        // GPUd() bool PropagatorImpl<value_T>::propagateToX(TrackPar_t& t, value_type xToGo, value_type bZ, value_type maxSnp, value_type maxStep,
+        //                                         PropagatorImpl<value_T>::MatCorrType matCorr, t::TrackLTIntegral* tofInfo, int signCorr) const
+        float x = 0;
+        if (trackPar.getXatLabR(390.f, x, 2.f) && o2::base::Propagator::Instance()->propagateToX(trackPar, x, 2.f, 0.85f, 2.0f, matCorr)) {
+          histos.fill(HIST("event/etaphiout"), trackPar.getEta(), trackPar.getPhi());
+        }
+      }
+
       const float tof = t.tofSignal() - collisionTime_ps;
       histos.fill(HIST("event/particlehypo"), t.pidForTracking());
       histos.fill(HIST("event/tofsignal"), t.p(), t.tofSignal());
