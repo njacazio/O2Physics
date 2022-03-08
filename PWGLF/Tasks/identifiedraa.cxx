@@ -12,6 +12,7 @@
 
 /// \brief Measurement of the nuclear modification factors R_AA.
 /// \author Jan Herdieckerhoff
+/// \author Nicolò Jacazio <nicolo.jacazio@cern.ch>
 /// \since June 2021
 
 /// Tasks included for Data:
@@ -31,6 +32,7 @@
 #include "Common/Core/PID/PIDResponse.h"
 #include "Common/DataModel/TrackSelectionTables.h"
 #include "Framework/AnalysisTask.h"
+#include "Framework/StaticFor.h"
 
 using namespace o2;
 using namespace o2::framework;
@@ -73,13 +75,20 @@ struct identifiedraaTask {
     globalTrackswoPrim = getGlobalTrackSelection();
     globalTrackswoPrim.SetMaxDcaXYPtDep([](float pt) { return 3.f + pt; });
     globalTrackswoPrim.SetRequireGoldenChi2(false);
+    if (1) {
+      globalTracks.SetTrackType(o2::aod::track::TrackTypeEnum::Track);
+      globalTrackswoPrim.SetTrackType(o2::aod::track::TrackTypeEnum::Track);
+    }
     // globalTracks.SetRequireITSRefit(false);
     // globalTracks.SetMaxChi2PerClusterTPC(35.f);
     // globalTracks.SetRequireTPCRefit(false);
     // globalTracks.SetMaxChi2PerClusterITS(60.f);
 
     std::vector<double> ptBin = {0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 18.0, 20.0};
-    AxisSpec axisPt{ptBin, "#it{p}_{T} [GeV/c]"};
+    if (1) {
+      ptBin = std::vector<double>{0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 2.0, 2.2, 2.4, 2.6};
+    }
+    const AxisSpec axisPt{ptBin, "#it{p}_{T} [GeV/c]"};
     // AxisSpec axisPt{100, 0, 10, "#it{p}_{T} [GeV/c]"};
     const AxisSpec axisNSigma{200, -10., 10.};
     const AxisSpec axisDca{1200, -3., 3.};
@@ -183,9 +192,9 @@ struct identifiedraaTask {
       }
     }
     for (auto& particle : mcParticles) {
-      //if (std::abs(particle.eta()) > 0.8) {
-      //   continue;
-      // }
+      // if (std::abs(particle.eta()) > 0.8) {
+      //    continue;
+      //  }
       if (std::abs(0.5f * std::log((particle.e() + particle.pz()) / (particle.e() - particle.pz()))) > 0.5) {
         continue;
       }
@@ -215,7 +224,7 @@ struct identifiedraaTask {
     fillHistograms_MC<5>(tracks, mcParticles);
   }
 
-  PROCESS_SWITCH(identifiedraaTask, processMC, "Process simulation events", false);
+  // PROCESS_SWITCH(identifiedraaTask, processMC, "Process simulation events", false);
 
   template <std::size_t i, typename T>
   void fillHistogramsData(T const& tracks)
@@ -277,25 +286,29 @@ struct identifiedraaTask {
     }
   }
 
-  void processData(soa::Join<aod::Collisions, aod::EvSels, aod::CentV0Ms>::iterator const& collision,
-                   soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
-                             aod::pidTOFFullPi, aod::pidTOFFullKa,
-                             aod::pidTOFFullPr, aod::pidTPCFullPi,
-                             aod::pidTPCFullKa, aod::pidTPCFullPr> const& tracks)
+  // void processData(soa::Join<aod::Collisions, aod::EvSels, aod::CentV0Ms>::iterator const& collision,
+  void process(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision,
+               soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
+                         aod::pidTOFFullPi, aod::pidTOFFullKa,
+                         aod::pidTOFFullPr, aod::pidTPCFullPi,
+                         aod::pidTPCFullKa, aod::pidTPCFullPr> const& tracks)
   {
     // LOGF(info, "Enter processData!");
     histos.fill(HIST(num_events), 1);
-    if (!collision.alias()[kINT7]) {
+    if (!collision.sel8()) {
       return;
     }
-    if (!collision.sel7()) {
-      return;
-    }
-    histos.fill(HIST("Centrality"), collision.centV0M());
-    if (collision.centV0M() > 5.f || collision.centV0M() < 0.1f) {
-      return;
-    }
-    histos.fill(HIST("CentralityAfterEvSel"), collision.centV0M());
+    // if (!collision.alias()[kINT7]) {
+    //   return;
+    // }
+    // if (!collision.sel7()) {
+    //   return;
+    // }
+    // histos.fill(HIST("Centrality"), collision.centV0M());
+    // if (collision.centV0M() > 5.f || collision.centV0M() < 0.1f) {
+    //   return;
+    // }
+    // histos.fill(HIST("CentralityAfterEvSel"), collision.centV0M());
     histos.fill(HIST("VtxZ"), collision.posZ());
     if (std::abs(collision.posZ()) > 10.f) {
       return;
@@ -309,28 +322,25 @@ struct identifiedraaTask {
     fillHistogramsData<5>(tracks);
   }
 
-  PROCESS_SWITCH(identifiedraaTask, processData, "Process data events", true);
+  // PROCESS_SWITCH(identifiedraaTask, processData, "Process data events", true);
 
-  void processMCasData(aod::Collision const& collision,
-                       soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
-                                 aod::pidTOFFullPi, aod::pidTOFFullKa,
-                                 aod::pidTOFFullPr, aod::pidTPCFullPi,
-                                 aod::pidTPCFullKa, aod::pidTPCFullPr> const& tracks)
-  {
-    // LOGF(info, "Enter processData!");
-    histos.fill(HIST(num_events), 1);
-    if (std::abs(collision.posZ()) > 10.f) {
-      return;
-    }
-    histos.fill(HIST(num_events), 2);
-    fillHistogramsData<0>(tracks);
-    fillHistogramsData<1>(tracks);
-    fillHistogramsData<2>(tracks);
-    fillHistogramsData<3>(tracks);
-    fillHistogramsData<4>(tracks);
-    fillHistogramsData<5>(tracks);
-  }
-  PROCESS_SWITCH(identifiedraaTask, processMCasData, "Process simulation events as data events", false);
+  // void processMCasData(aod::Collision const& collision,
+  //                      soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
+  //                                aod::pidTOFFullPi, aod::pidTOFFullKa,
+  //                                aod::pidTOFFullPr, aod::pidTPCFullPi,
+  //                                aod::pidTPCFullKa, aod::pidTPCFullPr> const& tracks)
+  // {
+  //   // LOGF(info, "Enter processData!");
+  //   histos.fill(HIST(num_events), 1);
+  //   if (std::abs(collision.posZ()) > 10.f) {
+  //     return;
+  //   }
+  //   histos.fill(HIST(num_events), 2);
+  //   static_for<0, 5>([&](auto i) {
+  //     fillHistogramsData<i>(tracks);
+  //   });
+  // }
+  // PROCESS_SWITCH(identifiedraaTask, processMCasData, "Process simulation events as data events", false);
 };
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
