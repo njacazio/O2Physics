@@ -52,26 +52,9 @@ void customize(std::vector<o2::framework::ConfigParamSpec>& workflowOptions)
 
 #include "Framework/runDataProcessing.h"
 
-/// Table with the TOF event time
-namespace o2::aod
-{
-namespace tofeventtime
-{
-DECLARE_SOA_COLUMN(TOFEvTime, tofEvTime, float);       //! TOF event time
-DECLARE_SOA_COLUMN(TOFEvTimeErr, tofEvTimeErr, float); //! TOF event time error
-DECLARE_SOA_COLUMN(TOFEvTimeMult, tofEvTimeMult, int); //! TOF event time multiplicity
-} // namespace tofeventtime
-
-DECLARE_SOA_TABLE(TOFEvTime, "AOD", "TOFEvTime", //! Table of the TOF event time
-                  tofeventtime::TOFEvTime,
-                  tofeventtime::TOFEvTimeErr,
-                  tofeventtime::TOFEvTimeMult);
-} // namespace o2::aod
-
 /// Task to produce the response table
 struct tofPidFull {
   // Tables to produce
-  Produces<o2::aod::TOFEvTime> tableEvTime;
   Produces<o2::aod::pidTOFFullEl> tablePIDEl;
   Produces<o2::aod::pidTOFFullMu> tablePIDMu;
   Produces<o2::aod::pidTOFFullPi> tablePIDPi;
@@ -149,7 +132,7 @@ struct tofPidFull {
     }
   }
 
-  using TrksEvTime = soa::Join<aod::Tracks, aod::TracksExtra, aod::TOFSignal, aod::TrackSelection>;
+  using TrksEvTime = soa::Join<aod::Tracks, aod::TracksExtra, aod::TOFSignal, aod::TrackSelection, aod::TOFEvTime>;
   template <o2::track::PID::ID pid>
   using ResponseImplementationEvTime = o2::pid::tof::ExpTimes<TrksEvTime::iterator, pid>;
   void processEvTime(TrksEvTime const& tracks, aod::Collisions const&)
@@ -163,8 +146,6 @@ struct tofPidFull {
     constexpr auto responseTr = ResponseImplementationEvTime<PID::Triton>();
     constexpr auto responseHe = ResponseImplementationEvTime<PID::Helium3>();
     constexpr auto responseAl = ResponseImplementationEvTime<PID::Alpha>();
-
-    tableEvTime.reserve(tracks.size());
 
     auto reserveTable = [&tracks](const Configurable<int>& flag, auto& table) {
       if (flag.value != 1) {
@@ -183,11 +164,8 @@ struct tofPidFull {
     reserveTable(pidHe, tablePIDHe);
     reserveTable(pidAl, tablePIDAl);
 
-    int lastCollisionId = -1;      // Last collision ID analysed
-    for (auto const& t : tracks) { // Loop on collisions
-      if (!t.has_collision()) {    // Track was not assigned, cannot compute event time
-        tableEvTime(0.f, 999.f, -1);
-
+    for (auto const& trk : tracks) { // Loop on collisions
+      if (!trk.has_collision()) {    // Track was not assigned, cannot compute event time
         auto fillEmptyTable = [](const Configurable<int>& flag, auto& table) {
           if (flag.value != 1) {
             return;
@@ -206,62 +184,14 @@ struct tofPidFull {
         fillEmptyTable(pidAl, tablePIDAl);
 
         continue;
-      } else if (t.collisionId() == lastCollisionId) { // Event time from this collision is already in the table
-        continue;
-      }
-      /// Create new table for the tracks in a collision
-      lastCollisionId = t.collisionId(); /// Cache last collision ID
-
-      const auto tracksInCollision = tracks.sliceBy(aod::track::collisionId, lastCollisionId);
-      // First make table for event time
-      const auto evTime = evTimeMakerForTracks<TrksEvTime::iterator, filterForTOFEventTime, o2::pid::tof::ExpTimes>(tracksInCollision, response);
-      static constexpr bool removebias = true;
-      int ngoodtracks = 0;
-      for (auto const& trk : tracksInCollision) { // Loop on Tracks
-        float et = evTime.eventTime;
-        float erret = evTime.eventTimeError;
-        if (!filterForTOFEventTime(trk)) { // Check if it was used for the event time
-          tableEvTime(et, erret, evTime.eventTimeMultiplicity);
-          continue;
-        }
-        if constexpr (removebias) {
-          float sumw = 1. / erret / erret;
-          et *= sumw;
-          et -= evTime.weights[ngoodtracks] * evTime.tracktime[ngoodtracks];
-          sumw -= evTime.weights[ngoodtracks++];
-          et /= sumw;
-          erret = sqrt(1. / sumw);
-        }
-        tableEvTime(et, erret, evTime.eventTimeMultiplicity);
       }
 
       // Check and fill enabled tables
-      auto makeTable = [&tracksInCollision, &evTime, &ngoodtracks, &timeSpread, this](const Configurable<int>& flag, auto& table, const auto& responsePID) {
+      auto makeTable = [&trk, this](const Configurable<int>& flag, auto& table, const auto& responsePID) {
         if (flag.value == 1) {
-          ngoodtracks = 0;
           // Prepare memory for enabled tables
-          table.reserve(tracksInCollision.size());
-          for (auto const& trk : tracksInCollision) { // Loop on Tracks
-            float et = evTime.eventTime;
-            float erret = evTime.eventTimeError;
-            if (erret > 199.f) {
-              table(erret, 999.f);
-              continue;
-            }
-            if (filterForTOFEventTime(trk)) { // Check if it was used for the event time
-              if constexpr (removebias) {
-                float sumw = 1. / erret / erret;
-                et *= sumw;
-                et -= evTime.weights[ngoodtracks] * evTime.tracktime[ngoodtracks];
-                sumw -= evTime.weights[ngoodtracks++];
-                et /= sumw;
-                erret = sqrt(1. / sumw);
-              }
-            }
-
-            table(responsePID.GetExpectedSigma(response, trk, trk.tofSignal(), erret),
-                  responsePID.GetSeparation(response, trk, et, erret));
-          }
+          table(responsePID.GetExpectedSigma(response, trk, trk.tofSignal(), trk.tofEvTime()),
+                responsePID.GetSeparation(response, trk, trk.tofEvTime(), trk.tofEvTimeErr()));
         }
       };
 
@@ -415,11 +345,12 @@ struct tofPidFullQa {
     h->GetXaxis()->SetBinLabel(2, "Passed ev. sel.");
     h->GetXaxis()->SetBinLabel(3, "Passed mult.");
     h->GetXaxis()->SetBinLabel(4, "Passed vtx Z");
-    h = histos.add<TH1>("event/trackselection", "", HistType::kTH1F, {{10, 0, 10, "Selection passed"}});
+
+    h = histos.add<TH1>("event/trackselection", "", kTH1F, {{10, 0, 10, "Selection passed"}});
     h->GetXaxis()->SetBinLabel(1, "Tracks read");
-    h->GetXaxis()->SetBinLabel(2, "hasTOF");
-    h->GetXaxis()->SetBinLabel(3, "isGlobalTrack");
-    h->GetXaxis()->SetBinLabel(4, "hasITS");
+    h->GetXaxis()->SetBinLabel(2, "isGlobalTrack");
+    h->GetXaxis()->SetBinLabel(3, "hasITS");
+    h->GetXaxis()->SetBinLabel(4, "hasTOF");
 
     histos.add("event/vertexz", "", kTH1F, {vtxZAxis});
     h = histos.add<TH1>("event/particlehypo", "", kTH1F, {{10, 0, 10, "PID in tracking"}});
@@ -464,6 +395,7 @@ struct tofPidFullQa {
         return;
       }
     }
+
     const auto& nsigma = o2::aod::pidutils::tofNSigma<id>(t);
     const auto& diff = o2::aod::pidutils::tofExpSignalDiff<id>(t);
     histos.fill(HIST(hexpected[id]), t.p(), tof - diff);
@@ -536,15 +468,15 @@ struct tofPidFullQa {
 
     for (auto t : tracks) {
       histos.fill(HIST("event/trackselection"), 0.5f);
-      if (!t.hasTOF()) { // Skipping tracks without TOF
+      if (!t.isGlobalTrack()) { // Skipping non global tracks
         continue;
       }
       histos.fill(HIST("event/trackselection"), 1.5f);
-      if (applyTrackCut && !t.isGlobalTrack()) { // Select global tracks
+      if (!t.hasITS()) { // Skipping tracks without ITS
         continue;
       }
       histos.fill(HIST("event/trackselection"), 2.5f);
-      if (!t.hasITS()) { // Skipping tracks without ITS
+      if (!t.hasTOF()) { // Skipping tracks without TOF
         continue;
       }
       histos.fill(HIST("event/trackselection"), 3.5f);
