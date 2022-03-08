@@ -67,9 +67,10 @@ template <typename trackType,
           typename trackTypeContainer,
           typename responseParametersType>
 o2::tof::eventTimeContainer evTimeMakerForTracks(const trackTypeContainer& tracks,
-                                                 const responseParametersType& responseParameters)
+                                                 const responseParametersType& responseParameters,
+                                                 const float& diamond = 6.0)
 {
-  return o2::tof::evTimeMakerFromParam<trackTypeContainer, trackType, trackFilter, response, responseParametersType>(tracks, responseParameters);
+  return o2::tof::evTimeMakerFromParam<trackTypeContainer, trackType, trackFilter, response, responseParametersType>(tracks, responseParameters, diamond);
 }
 
 /// Task to produce the TOF event time table
