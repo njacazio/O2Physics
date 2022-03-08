@@ -72,22 +72,6 @@ o2::tof::eventTimeContainer evTimeMakerForTracks(const trackTypeContainer& track
   return o2::tof::evTimeMakerFromParam<trackTypeContainer, trackType, trackFilter, response, responseParametersType>(tracks, responseParameters);
 }
 
-/// Table with the TOF event time
-namespace o2::aod
-{
-namespace tofeventtime
-{
-DECLARE_SOA_COLUMN(TOFEvTime, tofEvTime, float);       //! TOF event time
-DECLARE_SOA_COLUMN(TOFEvTimeErr, tofEvTimeErr, float); //! TOF event time error
-DECLARE_SOA_COLUMN(TOFEvTimeMult, tofEvTimeMult, int); //! TOF event time multiplicity
-} // namespace tofeventtime
-
-DECLARE_SOA_TABLE(TOFEvTime, "AOD", "TOFEvTime", //! Table of the TOF event time
-                  tofeventtime::TOFEvTime,
-                  tofeventtime::TOFEvTimeErr,
-                  tofeventtime::TOFEvTimeMult);
-} // namespace o2::aod
-
 /// Task to produce the TOF event time table
 struct tofEventTime {
   // Tables to produce

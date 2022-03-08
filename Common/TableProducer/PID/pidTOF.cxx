@@ -489,7 +489,6 @@ struct tofPidQa {
       }
       histos.fill(HIST("event/trackselection"), 3.5f);
 
-      const float tof = t.tofSignal() - collisionTime_ps;
       histos.fill(HIST("event/particlehypo"), t.pidForTracking());
       histos.fill(HIST("event/tofsignal"), t.p(), t.tofSignal());
       histos.fill(HIST("event/pexp"), t.p(), t.tofExpMom());
