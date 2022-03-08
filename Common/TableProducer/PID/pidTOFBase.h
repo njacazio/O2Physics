@@ -25,6 +25,7 @@
 #include "TableHelper.h"
 
 using namespace o2;
+using namespace o2::pid;
 using namespace o2::track;
 using namespace o2::framework;
 using namespace o2::framework::expressions;
@@ -70,3 +71,90 @@ o2::tof::eventTimeContainer evTimeMakerForTracks(const trackTypeContainer& track
 {
   return o2::tof::evTimeMakerFromParam<trackTypeContainer, trackType, trackFilter, response, responseParametersType>(tracks, responseParameters);
 }
+
+/// Table with the TOF event time
+namespace o2::aod
+{
+namespace tofeventtime
+{
+DECLARE_SOA_COLUMN(TOFEvTime, tofEvTime, float);       //! TOF event time
+DECLARE_SOA_COLUMN(TOFEvTimeErr, tofEvTimeErr, float); //! TOF event time error
+DECLARE_SOA_COLUMN(TOFEvTimeMult, tofEvTimeMult, int); //! TOF event time multiplicity
+} // namespace tofeventtime
+
+DECLARE_SOA_TABLE(TOFEvTime, "AOD", "TOFEvTime", //! Table of the TOF event time
+                  tofeventtime::TOFEvTime,
+                  tofeventtime::TOFEvTimeErr,
+                  tofeventtime::TOFEvTimeMult);
+} // namespace o2::aod
+
+/// Task to produce the TOF event time table
+struct tofEventTime {
+  // Tables to produce
+  Produces<o2::aod::TOFEvTime> tableEvTime;
+  // Detector response and input parameters
+  DetectorResponse response;
+  Service<o2::ccdb::BasicCCDBManager> ccdb;
+  Configurable<std::string> paramfile{"param-file", "", "Path to the parametrization object, if emtpy the parametrization is not taken from file"};
+  Configurable<std::string> sigmaname{"param-sigma", "TOFReso", "Name of the parametrization for the expected sigma, used in both file and CCDB mode"};
+  Configurable<std::string> url{"ccdb-url", "http://alice-ccdb.cern.ch", "url of the ccdb repository"};
+  Configurable<std::string> ccdbPath{"ccdbPath", "Analysis/PID/TOF", "Path of the TOF parametrization on the CCDB"};
+  Configurable<long> timestamp{"ccdb-timestamp", -1, "timestamp of the object"};
+
+  void init(o2::framework::InitContext& initContext)
+  {
+    // Getting the parametrization parameters
+    ccdb->setURL(url.value);
+    ccdb->setTimestamp(timestamp.value);
+    ccdb->setCaching(true);
+    ccdb->setLocalObjectValidityChecking();
+    // Not later than now objects
+    ccdb->setCreatedNotAfter(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+    //
+    const std::vector<float> p = {0.008, 0.008, 0.002, 40.0};
+    response.SetParameters(DetectorResponse::kSigma, p);
+    const std::string fname = paramfile.value;
+    if (!fname.empty()) { // Loading the parametrization from file
+      LOG(info) << "Loading exp. sigma parametrization from file" << fname << ", using param: " << sigmaname.value;
+      response.LoadParamFromFile(fname.data(), sigmaname.value, DetectorResponse::kSigma);
+    } else { // Loading it from CCDB
+      std::string path = ccdbPath.value + "/" + sigmaname.value;
+      LOG(info) << "Loading exp. sigma parametrization from CCDB, using path: " << path << " for timestamp " << timestamp.value;
+      response.LoadParam(DetectorResponse::kSigma, ccdb->getForTimeStamp<Parametrization>(path, timestamp.value));
+    }
+  }
+
+  using TrksEvTime = soa::Join<aod::Tracks, aod::TracksExtra, aod::TOFSignal, aod::TrackSelection>;
+  template <o2::track::PID::ID pid>
+  using ResponseImplementationEvTime = o2::pid::tof::ExpTimes<TrksEvTime::iterator, pid>;
+  void process(TrksEvTime const& tracks, aod::Collisions const&)
+  {
+    tableEvTime.reserve(tracks.size());
+
+    int lastCollisionId = -1;      // Last collision ID analysed
+    for (auto const& t : tracks) { // Loop on collisions
+      if (!t.has_collision()) {    // Track was not assigned, cannot compute event time
+        tableEvTime(0.f, 999.f, -1);
+      } else if (t.collisionId() == lastCollisionId) { // Event time from this collision is already in the table
+        continue;
+      }
+      /// Create new table for the tracks in a collision
+      lastCollisionId = t.collisionId(); /// Cache last collision ID
+
+      const auto tracksInCollision = tracks.sliceBy(aod::track::collisionId, lastCollisionId);
+      // First make table for event time
+      constexpr float diamond = 6.0;
+      const auto evTime = evTimeMakerForTracks<TrksEvTime::iterator, filterForTOFEventTime, o2::pid::tof::ExpTimes>(tracksInCollision, response, diamond);
+      static constexpr bool removebias = true;
+      int ngoodtracks = 0;
+      float et = evTime.eventTime;
+      float erret = evTime.eventTimeError;
+      for (auto const& trk : tracksInCollision) { // Loop on Tracks
+        if constexpr (removebias) {
+          o2::tof::removeBias<TrksEvTime::iterator, filterForTOFEventTime>(trk, evTime, ngoodtracks, et, erret, diamond, 2);
+        }
+        tableEvTime(et, erret, evTime.eventTimeMultiplicity);
+      }
+    }
+  }
+};
