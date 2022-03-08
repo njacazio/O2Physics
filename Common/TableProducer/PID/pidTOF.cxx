@@ -332,32 +332,36 @@ struct tofPidQa {
   Configurable<bool> applyRapidityCut{"applyRapidityCut", false, "Flag to apply rapidity cut"};
 
   template <uint8_t i>
-  void addParticleHistos()
+  void addParticleHistos(const AxisSpec& pAxis, const AxisSpec& ptAxis)
   {
-    AxisSpec pAxis{nBinsP, minP, maxP, "#it{p} (GeV/#it{c})"};
-    if (logAxis) {
-      pAxis.makeLogaritmic();
-    }
 
     // NSigma
-    const AxisSpec nSigmaAxis{nBinsNSigma, minNSigma, maxNSigma, Form("N_{#sigma}^{TOF}(%s)", pT[i])};
-    histos.add(hnsigma[i].data(), "", kTH2F, {pAxis, nSigmaAxis});
+    const char* axisTitle = Form("N_{#sigma}^{TOF}(%s)", pT[i]);
+    const AxisSpec nSigmaAxis{nBinsNSigma, minNSigma, maxNSigma, axisTitle};
+    histos.add(hnsigma[i].data(), axisTitle, kTH2F, {pAxis, nSigmaAxis});
+    histos.add(hnsigmapt[i].data(), axisTitle, kTH2F, {ptAxis, nSigmaAxis});
+    histos.add(hnsigmapospt[i].data(), axisTitle, kTH2F, {ptAxis, nSigmaAxis});
+    histos.add(hnsigmanegpt[i].data(), axisTitle, kTH2F, {ptAxis, nSigmaAxis});
   }
 
   void init(o2::framework::InitContext&)
   {
-
+    const AxisSpec multAxis{100, 0, 100, "TOF multiplicity"};
     const AxisSpec vtxZAxis{100, -20, 20, "Vtx_{z} (cm)"};
-    const AxisSpec tofAxis{10000, 0, 2e6, "TOF Signal"};
-    const AxisSpec etaAxis{100, -2, 2, "#it{#eta}"};
+    const AxisSpec tofAxis{10000, 0, 2e6, "TOF Signal (ps)"};
+    const AxisSpec etaAxis{100, -1, 1, "#it{#eta}"};
+    const AxisSpec phiAxis{100, 0, TMath::TwoPi(), "#it{#phi}"};
     const AxisSpec colTimeAxis{100, -2000, 2000, "Collision time (ps)"};
+    const AxisSpec colTimeResoAxis{100, 0, 1000, "#sigma_{Collision time} (ps)"};
     const AxisSpec lAxis{100, 0, 500, "Track length (cm)"};
     const AxisSpec ptResoAxis{100, 0, 0.1, "#sigma_{#it{p}_{T}}"};
     AxisSpec ptAxis{nBinsP, minP, maxP, "#it{p}_{T} (GeV/#it{c})"};
     AxisSpec pAxis{nBinsP, minP, maxP, "#it{p} (GeV/#it{c})"};
+    AxisSpec pExpAxis{nBinsP, minP, maxP, "#it{p}_{Exp. TOF} (GeV/#it{c})"};
     if (logAxis) {
       ptAxis.makeLogaritmic();
       pAxis.makeLogaritmic();
+      pExpAxis.makeLogaritmic();
     }
 
     // Event properties
@@ -393,7 +397,7 @@ struct tofPidQa {
     // histos.add("event/ptreso", "", kTH2F, {pAxis, ptResoAxis});
 
     static_for<0, 8>([&](auto i) {
-      addParticleHistos<i>();
+      addParticleHistos<i>(pAxis, ptAxis);
     });
   }
 
@@ -422,7 +426,7 @@ struct tofPidQa {
                          aod::pidTOFKa, aod::pidTOFPr, aod::pidTOFDe,
                          aod::pidTOFTr, aod::pidTOFHe, aod::pidTOFAl,
                          aod::TOFSignal, aod::TrackSelection>;
-  void process(aod::Collision const& collision,
+  void process(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision,
                Trks const& tracks)
   {
     histos.fill(HIST("event/evsel"), 1);
@@ -437,9 +441,38 @@ struct tofPidQa {
     }
 
     histos.fill(HIST("event/evsel"), 2);
-    const float collisionTime_ps = collision.collisionTime() * 1000.f;
+
+    // Computing Multiplicity first
+    float ntracks = 0;
+    int tofmult = 0;
+    for (auto t : tracks) {
+      if (applyTrackCut && !t.isGlobalTrack()) {
+        continue;
+      }
+      ntracks += 1;
+      if (!t.hasTOF()) { // Skipping tracks without TOF
+        continue;
+      }
+      tofmult++;
+    }
+    // if (0 && ntracks < 1) {
+    //   return;
+    // }
+    // if (0 && tofmult < 1) {
+    //   return;
+    // }
+    histos.fill(HIST("event/evsel"), 3);
+    if (abs(collision.posZ()) > 10.f) {
+      return;
+    }
+    histos.fill(HIST("event/evsel"), 4);
     histos.fill(HIST("event/vertexz"), collision.posZ());
+    histos.fill(HIST("event/trackmultiplicity"), ntracks);
+    histos.fill(HIST("event/tofmultiplicity"), tofmult);
+
+    const float collisionTime_ps = collision.collisionTime() * 1000.f;
     histos.fill(HIST("event/colltime"), collisionTime_ps);
+    histos.fill(HIST("event/colltimereso"), tofmult, collision.collisionTimeRes() * 1000.f);
 
     for (auto t : tracks) {
       histos.fill(HIST("event/trackselection"), 0.5f);
@@ -456,13 +489,16 @@ struct tofPidQa {
       }
       histos.fill(HIST("event/trackselection"), 3.5f);
 
-      // const float tof = t.tofSignal() - collisionTime_ps;
-
-      //
+      const float tof = t.tofSignal() - collisionTime_ps;
+      histos.fill(HIST("event/particlehypo"), t.pidForTracking());
       histos.fill(HIST("event/tofsignal"), t.p(), t.tofSignal());
+      histos.fill(HIST("event/pexp"), t.p(), t.tofExpMom());
       histos.fill(HIST("event/eta"), t.eta());
+      histos.fill(HIST("event/phi"), t.phi());
+      histos.fill(HIST("event/etaphi"), t.eta(), t.phi());
       histos.fill(HIST("event/length"), t.length());
       histos.fill(HIST("event/pt"), t.pt());
+      histos.fill(HIST("event/p"), t.p());
       // histos.fill(HIST("event/ptreso"), t.p(), t.sigma1Pt() * t.pt() * t.pt());
       //
       fillParticleHistos<o2::track::PID::Electron>(t);
