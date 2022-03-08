@@ -22,7 +22,6 @@
 #include "Framework/HistogramRegistry.h"
 #include "ReconstructionDataFormats/Track.h"
 #include <CCDB/BasicCCDBManager.h>
-#include "Common/DataModel/TrackSelectionTables.h"
 #include "Common/Core/PID/PIDResponse.h"
 #include "Common/Core/PID/PIDTPC.h"
 
@@ -168,7 +167,7 @@ struct pidTPCTaskQA {
   }
 
   void process(soa::Join<aod::Collisions, aod::McCollisionLabels>::iterator const& collision,
-               soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
+               soa::Join<aod::Tracks, aod::TracksExtra,
                          aod::pidTPCFullEl, aod::pidTPCFullMu, aod::pidTPCFullPi,
                          aod::pidTPCFullKa, aod::pidTPCFullPr, aod::pidTPCFullDe,
                          aod::pidTPCFullTr, aod::pidTPCFullHe, aod::pidTPCFullAl,
