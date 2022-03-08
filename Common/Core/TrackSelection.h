@@ -62,8 +62,8 @@ class TrackSelection
         (track.itsNCls() >= mMinNClustersITS) &&
         (track.itsChi2NCl() <= mMaxChi2PerClusterITS) &&
         (track.tpcChi2NCl() <= mMaxChi2PerClusterTPC) &&
-        ((isRun2 && mRequireITSRefit) ? (track.flags() & o2::aod::track::ITSrefit) : true) &&
-        ((isRun2 && mRequireTPCRefit) ? (track.flags() & o2::aod::track::TPCrefit) : true) &&
+        ((isRun2 && mRequireITSRefit) ? (track.flags() & o2::aod::track::ITSrefit) : track.hasITS()) &&
+        ((isRun2 && mRequireTPCRefit) ? (track.flags() & o2::aod::track::TPCrefit) : track.hasTPC()) &&
         ((isRun2 && mRequireGoldenChi2) ? (track.flags() & o2::aod::track::GoldenChi2) : true) &&
         FulfillsITSHitRequirements(track.itsClusterMap()) &&
         abs(track.dcaXY()) <= ((mMaxDcaXYPtDep) ? mMaxDcaXYPtDep(track.pt()) : mMaxDcaXY) &&
