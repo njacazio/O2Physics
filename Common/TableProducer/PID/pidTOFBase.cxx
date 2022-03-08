@@ -143,3 +143,10 @@ struct tofEventTime {
     }
   }
 };
+
+WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
+{
+  auto workflow = WorkflowSpec{adaptAnalysisTask<tofSignal>(cfgc),
+                               adaptAnalysisTask<tofEventTime>(cfgc)};
+  return workflow;
+}

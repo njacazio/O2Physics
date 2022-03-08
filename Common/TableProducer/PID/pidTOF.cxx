@@ -125,7 +125,7 @@ struct tofPid {
     }
   }
 
-  using TrksEvTime = soa::Join<aod::Tracks, aod::TracksExtra, aod::TOFSignal, aod::TrackSelection>;
+  using TrksEvTime = soa::Join<aod::Tracks, aod::TracksExtra, aod::TOFSignal, aod::TrackSelection, aod::TOFEvTime>;
   template <o2::track::PID::ID pid>
   using ResponseImplementationEvTime = o2::pid::tof::ExpTimes<TrksEvTime::iterator, pid>;
   void processEvTime(TrksEvTime const& tracks, aod::Collisions const&)
@@ -157,10 +157,8 @@ struct tofPid {
     reserveTable(pidHe, tablePIDHe);
     reserveTable(pidAl, tablePIDAl);
 
-    int lastCollisionId = -1;      // Last collision ID analysed
-    for (auto const& t : tracks) { // Loop on collisions
-      if (!t.has_collision()) {    // Track was not assigned, cannot compute event time
-
+    for (auto const& trk : tracks) { // Loop on collisions
+      if (!trk.has_collision()) {    // Track was not assigned, cannot compute event time
         auto fillEmptyTable = [](const Configurable<int>& flag, auto& table) {
           if (flag.value != 1) {
             return;
@@ -184,55 +182,17 @@ struct tofPid {
         fillEmptyTable(pidAl, tablePIDAl);
 
         continue;
-      } else if (t.collisionId() == lastCollisionId) { // Event time from this collision is already in the table
-        continue;
       }
-      /// Create new table for the tracks in a collision
-      lastCollisionId = t.collisionId(); /// Cache last collision ID
-
-      const auto tracksInCollision = tracks.sliceBy(aod::track::collisionId, lastCollisionId);
-      // First make table for event time
-      const auto evTime = evTimeMakerForTracks<TrksEvTime::iterator, filterForTOFEventTime, o2::pid::tof::ExpTimes>(tracksInCollision, response);
-      static constexpr bool removebias = true;
-      int ngoodtracks = 0;
 
       // Check and fill enabled tables
-      auto makeTable = [&tracksInCollision, &evTime, &ngoodtracks, this](const Configurable<int>& flag, auto& table, const auto& responsePID) {
+      auto makeTable = [&trk, this](const Configurable<int>& flag, auto& table, const auto& responsePID) {
         if (flag.value == 1) {
-          ngoodtracks = 0;
-          // Prepare memory for enabled tables
-          table.reserve(tracksInCollision.size());
-          for (auto const& trk : tracksInCollision) { // Loop on Tracks
-            float et = evTime.eventTime;
-            float erret = evTime.eventTimeError;
-            if (erret > 199.f) {
-              aod::pidutils::packInTable<aod::pidtof_tiny::binned_nsigma_t,
-                                         aod::pidtof_tiny::upper_bin,
-                                         aod::pidtof_tiny::lower_bin>(-999.f, table,
-                                                                      aod::pidtof_tiny::binned_min,
-                                                                      aod::pidtof_tiny::binned_max,
-                                                                      aod::pidtof_tiny::bin_width);
-              continue;
-            }
-            if (filterForTOFEventTime(trk)) { // Check if it was used for the event time
-              if constexpr (removebias) {
-                float sumw = 1. / erret / erret;
-                et *= sumw;
-                et -= evTime.weights[ngoodtracks] * evTime.tracktime[ngoodtracks];
-                sumw -= evTime.weights[ngoodtracks++];
-                et /= sumw;
-                erret = sqrt(1. / sumw);
-              }
-            }
-
-            const float separation = responsePID.GetSeparation(response, trk, et, erret);
-            aod::pidutils::packInTable<aod::pidtof_tiny::binned_nsigma_t,
-                                       aod::pidtof_tiny::upper_bin,
-                                       aod::pidtof_tiny::lower_bin>(separation, table,
-                                                                    aod::pidtof_tiny::binned_min,
-                                                                    aod::pidtof_tiny::binned_max,
-                                                                    aod::pidtof_tiny::bin_width);
-          }
+          aod::pidutils::packInTable<aod::pidtof_tiny::binned_nsigma_t,
+                                     aod::pidtof_tiny::upper_bin,
+                                     aod::pidtof_tiny::lower_bin>(responsePID.GetSeparation(response, trk, trk.tofEvTime(), trk.tofEvTimeErr()), table,
+                                                                  aod::pidtof_tiny::binned_min,
+                                                                  aod::pidtof_tiny::binned_max,
+                                                                  aod::pidtof_tiny::bin_width);
         }
       };
 
@@ -515,8 +475,7 @@ struct tofPidQa {
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
-  auto workflow = WorkflowSpec{adaptAnalysisTask<tofSignal>(cfgc),
-                               adaptAnalysisTask<tofPid>(cfgc)};
+  auto workflow = WorkflowSpec{adaptAnalysisTask<tofPid>(cfgc)};
   if (cfgc.options().get<int>("add-qa")) {
     workflow.push_back(adaptAnalysisTask<tofPidQa>(cfgc));
   }

@@ -29,7 +29,6 @@
 #include "TableHelper.h"
 #include "Framework/StaticFor.h"
 #include "TOFBase/EventTimeMaker.h"
-#include "pidTOFBase.h"
 #include "Common/Core/trackUtilities.h"
 #include "ReconstructionDataFormats/DCA.h"
 #include "DetectorsBase/Propagator.h"
@@ -189,7 +188,6 @@ struct tofPidFull {
       // Check and fill enabled tables
       auto makeTable = [&trk, this](const Configurable<int>& flag, auto& table, const auto& responsePID) {
         if (flag.value == 1) {
-          // Prepare memory for enabled tables
           table(responsePID.GetExpectedSigma(response, trk, trk.tofSignal(), trk.tofEvTime()),
                 responsePID.GetSeparation(response, trk, trk.tofEvTime(), trk.tofEvTimeErr()));
         }
@@ -752,14 +750,12 @@ struct tofPidCollisionTimeQa {
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
-  auto workflow = WorkflowSpec{adaptAnalysisTask<tofSignal>(cfgc),
-                               adaptAnalysisTask<tofPidFull>(cfgc)};
+  auto workflow = WorkflowSpec{adaptAnalysisTask<tofPidFull>(cfgc)};
   if (cfgc.options().get<int>("add-qa")) {
     workflow.push_back(adaptAnalysisTask<tofPidFullQa>(cfgc));
   }
   if (cfgc.options().get<int>("add-qa-ev-time")) {
     workflow.push_back(adaptAnalysisTask<tofPidCollisionTimeQa>(cfgc));
   }
-  workflow.push_back(adaptAnalysisTask<tofEventTime>(cfgc));
   return workflow;
 }
