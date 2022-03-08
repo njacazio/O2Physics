@@ -43,7 +43,7 @@ void customize(std::vector<o2::framework::ConfigParamSpec>& workflowOptions)
 
 #include "Framework/runDataProcessing.h"
 
-/// Task to produce the TPC response table
+/// Task to produce the response table
 struct tpcPid {
   using Trks = soa::Join<aod::Tracks, aod::TracksExtra>;
   using Coll = aod::Collisions;
@@ -300,12 +300,13 @@ struct tpcPidQa {
     }
   }
 
-  void process(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision,
-               soa::Join<aod::Tracks, aod::TracksExtra,
+  using Trks = soa::Join<aod::Tracks, aod::TracksExtra,
                          aod::pidTPCEl, aod::pidTPCMu, aod::pidTPCPi,
                          aod::pidTPCKa, aod::pidTPCPr, aod::pidTPCDe,
                          aod::pidTPCTr, aod::pidTPCHe, aod::pidTPCAl,
-                         aod::TrackSelection> const& tracks)
+                         aod::TrackSelection>;
+  void process(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision,
+               Trks const& tracks)
   {
     histos.fill(HIST("event/evsel"), 1);
     if (applyEvSel == 1) {
