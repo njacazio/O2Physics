@@ -348,6 +348,12 @@ struct tofPidQa {
     }
 
     // Event properties
+    histos.add("event/trackselection", "", HistType::kTH1F, {{10, 0, 10, "Selection passed"}});
+    histos.get<TH1>(HIST("event/trackselection"))->GetXaxis()->SetBinLabel(1, "Tracks read");
+    histos.get<TH1>(HIST("event/trackselection"))->GetXaxis()->SetBinLabel(2, "hasTOF");
+    histos.get<TH1>(HIST("event/trackselection"))->GetXaxis()->SetBinLabel(3, "isGlobalTrack");
+    histos.get<TH1>(HIST("event/trackselection"))->GetXaxis()->SetBinLabel(4, "hasITS");
+
     histos.add("event/vertexz", "", HistType::kTH1F, {vtxZAxis});
     histos.add("event/colltime", "", HistType::kTH1F, {colTimeAxis});
     histos.add("event/tofsignal", "", HistType::kTH2F, {pAxis, tofAxis});
@@ -386,12 +392,19 @@ struct tofPidQa {
 
     for (auto t : tracks) {
       //
+      histos.fill(HIST("event/trackselection"), 0.5f);
       if (!t.hasTOF()) { // Skipping tracks without TOF
         continue;
       }
-      if (!t.isGlobalTrack()) {
+      histos.fill(HIST("event/trackselection"), 1.5f);
+      if (!t.isGlobalTrack()) { // Select global tracks
         continue;
       }
+      histos.fill(HIST("event/trackselection"), 2.5f);
+      if (!t.hasITS()) { // Select tracks with ITS
+        continue;
+      }
+      histos.fill(HIST("event/trackselection"), 3.5f);
 
       // const float tof = t.tofSignal() - collisionTime_ps;
 
