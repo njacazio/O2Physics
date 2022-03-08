@@ -33,8 +33,7 @@ using namespace o2::framework::expressions;
 
 void customize(std::vector<o2::framework::ConfigParamSpec>& workflowOptions)
 {
-  std::vector<ConfigParamSpec> options{{"add-qa", VariantType::Int, 0, {"Produce TOF PID QA histograms"}}};
-  options.push_back({"add-qa-ev-time", VariantType::Int, 0, {"Produce TOF PID QA histograms for TOF event time"}});
+  std::vector<ConfigParamSpec> options{{"add-qa-ev-time", VariantType::Int, 0, {"Produce TOF PID QA histograms for TOF event time"}}};
   std::swap(workflowOptions, options);
 }
 
