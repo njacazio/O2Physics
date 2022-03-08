@@ -11,9 +11,9 @@
 
 ///
 /// \file   pidTPC.cxx
-/// \author Nicolò Jacazio nicolo.jacazio@cern.ch
 /// \author Annalena Kalteyer annalena.sophie.kalteyer@cern.ch
 /// \author Christian Sonnabend christian.sonnabend@cern.ch
+/// \author Nicolò Jacazio nicolo.jacazio@cern.ch
 /// \brief  Task to produce PID tables for TPC split for each particle with only the Nsigma information.
 ///         Only the tables for the mass hypotheses requested are filled, the others are sent empty.
 ///

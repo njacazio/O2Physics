@@ -11,9 +11,9 @@
 
 ///
 /// \file   pidTPCFull.cxx
-/// \author Nicolo' Jacazio
-/// \author Annalena Kalteyer
-/// \author Christian Sonnabend
+/// \author Annalena Kalteyer annalena.sophie.kalteyer@cern.ch
+/// \author Christian Sonnabend christian.sonnabend@cern.ch
+/// \author Nicolò Jacazio nicolo.jacazio@cern.ch
 /// \brief  Task to produce PID tables for TPC split for each particle.
 ///         Only the tables for the mass hypotheses requested are filled, the others are sent empty.
 ///
@@ -546,8 +546,6 @@ WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
   auto workflow = WorkflowSpec{adaptAnalysisTask<tpcPidFull>(cfgc)};
   if (cfgc.options().get<int>("add-qa")) {
     workflow.push_back(adaptAnalysisTask<tpcPidFullQa>(cfgc));
-  }
-  if (1) {
     workflow.push_back(adaptAnalysisTask<tpcPidFullQaWTof>(cfgc));
   }
   return workflow;
