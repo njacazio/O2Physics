@@ -197,7 +197,7 @@ struct tofPid {
       int ngoodtracks = 0;
 
       // Check and fill enabled tables
-      auto makeTable = [&tracksInCollision, &evTime, &ngoodtracks](const Configurable<int>& flag, auto& table, const DetectorResponse& response, const auto& responsePID) {
+      auto makeTable = [&tracksInCollision, &evTime, &ngoodtracks, this](const Configurable<int>& flag, auto& table, const auto& responsePID) {
         if (flag.value == 1) {
           ngoodtracks = 0;
           // Prepare memory for enabled tables
@@ -236,15 +236,15 @@ struct tofPid {
         }
       };
 
-      makeTable(pidEl, tablePIDEl, response, responseEl);
-      makeTable(pidMu, tablePIDMu, response, responseMu);
-      makeTable(pidPi, tablePIDPi, response, responsePi);
-      makeTable(pidKa, tablePIDKa, response, responseKa);
-      makeTable(pidPr, tablePIDPr, response, responsePr);
-      makeTable(pidDe, tablePIDDe, response, responseDe);
-      makeTable(pidTr, tablePIDTr, response, responseTr);
-      makeTable(pidHe, tablePIDHe, response, responseHe);
-      makeTable(pidAl, tablePIDAl, response, responseAl);
+      makeTable(pidEl, tablePIDEl, responseEl);
+      makeTable(pidMu, tablePIDMu, responseMu);
+      makeTable(pidPi, tablePIDPi, responsePi);
+      makeTable(pidKa, tablePIDKa, responseKa);
+      makeTable(pidPr, tablePIDPr, responsePr);
+      makeTable(pidDe, tablePIDDe, responseDe);
+      makeTable(pidTr, tablePIDTr, responseTr);
+      makeTable(pidHe, tablePIDHe, responseHe);
+      makeTable(pidAl, tablePIDAl, responseAl);
     }
   }
 
@@ -348,11 +348,11 @@ struct tofPidQa {
     }
 
     // Event properties
-    histos.add("event/trackselection", "", HistType::kTH1F, {{10, 0, 10, "Selection passed"}});
-    histos.get<TH1>(HIST("event/trackselection"))->GetXaxis()->SetBinLabel(1, "Tracks read");
-    histos.get<TH1>(HIST("event/trackselection"))->GetXaxis()->SetBinLabel(2, "hasTOF");
-    histos.get<TH1>(HIST("event/trackselection"))->GetXaxis()->SetBinLabel(3, "isGlobalTrack");
-    histos.get<TH1>(HIST("event/trackselection"))->GetXaxis()->SetBinLabel(4, "hasITS");
+    auto h = histos.add<TH1>("event/trackselection", "", HistType::kTH1F, {{10, 0, 10, "Selection passed"}});
+    h->GetXaxis()->SetBinLabel(1, "Tracks read");
+    h->GetXaxis()->SetBinLabel(2, "hasTOF");
+    h->GetXaxis()->SetBinLabel(3, "isGlobalTrack");
+    h->GetXaxis()->SetBinLabel(4, "hasITS");
 
     histos.add("event/vertexz", "", HistType::kTH1F, {vtxZAxis});
     histos.add("event/colltime", "", HistType::kTH1F, {colTimeAxis});

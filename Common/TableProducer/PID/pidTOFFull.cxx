@@ -236,7 +236,7 @@ struct tofPidFull {
       }
 
       // Check and fill enabled tables
-      auto makeTable = [&tracksInCollision, &evTime, &ngoodtracks](const Configurable<int>& flag, auto& table, const DetectorResponse& response, const auto& responsePID) {
+      auto makeTable = [&tracksInCollision, &evTime, &ngoodtracks, &timeSpread, this](const Configurable<int>& flag, auto& table, const auto& responsePID) {
         if (flag.value == 1) {
           ngoodtracks = 0;
           // Prepare memory for enabled tables
@@ -265,15 +265,15 @@ struct tofPidFull {
         }
       };
 
-      makeTable(pidEl, tablePIDEl, response, responseEl);
-      makeTable(pidMu, tablePIDMu, response, responseMu);
-      makeTable(pidPi, tablePIDPi, response, responsePi);
-      makeTable(pidKa, tablePIDKa, response, responseKa);
-      makeTable(pidPr, tablePIDPr, response, responsePr);
-      makeTable(pidDe, tablePIDDe, response, responseDe);
-      makeTable(pidTr, tablePIDTr, response, responseTr);
-      makeTable(pidHe, tablePIDHe, response, responseHe);
-      makeTable(pidAl, tablePIDAl, response, responseAl);
+      makeTable(pidEl, tablePIDEl, responseEl);
+      makeTable(pidMu, tablePIDMu, responseMu);
+      makeTable(pidPi, tablePIDPi, responsePi);
+      makeTable(pidKa, tablePIDKa, responseKa);
+      makeTable(pidPr, tablePIDPr, responsePr);
+      makeTable(pidDe, tablePIDDe, responseDe);
+      makeTable(pidTr, tablePIDTr, responseTr);
+      makeTable(pidHe, tablePIDHe, responseHe);
+      makeTable(pidAl, tablePIDAl, responseAl);
     }
   }
 
@@ -415,6 +415,11 @@ struct tofPidFullQa {
     h->GetXaxis()->SetBinLabel(2, "Passed ev. sel.");
     h->GetXaxis()->SetBinLabel(3, "Passed mult.");
     h->GetXaxis()->SetBinLabel(4, "Passed vtx Z");
+    h = histos.add<TH1>("event/trackselection", "", HistType::kTH1F, {{10, 0, 10, "Selection passed"}});
+    h->GetXaxis()->SetBinLabel(1, "Tracks read");
+    h->GetXaxis()->SetBinLabel(2, "hasTOF");
+    h->GetXaxis()->SetBinLabel(3, "isGlobalTrack");
+    h->GetXaxis()->SetBinLabel(4, "hasITS");
 
     histos.add("event/vertexz", "", kTH1F, {vtxZAxis});
     h = histos.add<TH1>("event/particlehypo", "", kTH1F, {{10, 0, 10, "PID in tracking"}});
@@ -530,12 +535,19 @@ struct tofPidFullQa {
     histos.fill(HIST("event/colltimereso"), tofmult, collision.collisionTimeRes() * 1000.f);
 
     for (auto t : tracks) {
-      if (applyTrackCut && !t.isGlobalTrack()) {
-        continue;
-      }
+      histos.fill(HIST("event/trackselection"), 0.5f);
       if (!t.hasTOF()) { // Skipping tracks without TOF
         continue;
       }
+      histos.fill(HIST("event/trackselection"), 1.5f);
+      if (applyTrackCut && !t.isGlobalTrack()) { // Select global tracks
+        continue;
+      }
+      histos.fill(HIST("event/trackselection"), 2.5f);
+      if (!t.hasITS()) { // Skipping tracks without ITS
+        continue;
+      }
+      histos.fill(HIST("event/trackselection"), 3.5f);
 
       // Computing phi out
       if (doEtaPhiMap && t.has_collision()) {
