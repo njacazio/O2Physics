@@ -329,11 +329,14 @@ struct tofPidQa {
     h->GetXaxis()->SetBinLabel(3, "Passed mult.");
     h->GetXaxis()->SetBinLabel(4, "Passed vtx Z");
 
-    h = histos.add<TH1>("event/trackselection", "", kTH1F, {{10, 0, 10, "Selection passed"}});
+    h = histos.add<TH1>("event/trackselection", "", kTH1F, {{10, 0.5, 10.5, "Selection passed"}});
     h->GetXaxis()->SetBinLabel(1, "Tracks read");
     h->GetXaxis()->SetBinLabel(2, "isGlobalTrack");
     h->GetXaxis()->SetBinLabel(3, "hasITS");
-    h->GetXaxis()->SetBinLabel(4, "hasTOF");
+    h->GetXaxis()->SetBinLabel(4, "hasTPC");
+    h->GetXaxis()->SetBinLabel(5, "hasTRD");
+    h->GetXaxis()->SetBinLabel(6, "hasTOF");
+    h->GetXaxis()->SetBinLabel(7, "hasTRD+hasTOF");
 
     histos.add("event/vertexz", "", kTH1F, {vtxZAxis});
     h = histos.add<TH1>("event/particlehypo", "", kTH1F, {{10, 0, 10, "PID in tracking"}});
@@ -433,19 +436,29 @@ struct tofPidQa {
     histos.fill(HIST("event/colltimereso"), tofmult, collision.collisionTimeRes() * 1000.f);
 
     for (auto t : tracks) {
-      histos.fill(HIST("event/trackselection"), 0.5f);
+      histos.fill(HIST("event/trackselection"), 1.f);
       if (!t.isGlobalTrack()) { // Skipping non global tracks
         continue;
       }
-      histos.fill(HIST("event/trackselection"), 1.5f);
+      histos.fill(HIST("event/trackselection"), 2.f);
       if (!t.hasITS()) { // Skipping tracks without ITS
         continue;
       }
-      histos.fill(HIST("event/trackselection"), 2.5f);
+      histos.fill(HIST("event/trackselection"), 3.f);
+      if (!t.hasTPC()) { // Skipping tracks without TPC
+        continue;
+      }
+      histos.fill(HIST("event/trackselection"), 4.f);
+      if (t.hasTRD()) { // Skipping tracks without TRD
+        histos.fill(HIST("event/trackselection"), 5.f);
+      }
       if (!t.hasTOF()) { // Skipping tracks without TOF
         continue;
       }
-      histos.fill(HIST("event/trackselection"), 3.5f);
+      histos.fill(HIST("event/trackselection"), 6.f);
+      if (t.hasTRD()) { // Skipping tracks without TRD
+        histos.fill(HIST("event/trackselection"), 7.f);
+      }
 
       histos.fill(HIST("event/particlehypo"), t.pidForTracking());
       histos.fill(HIST("event/tofsignal"), t.p(), t.tofSignal());
