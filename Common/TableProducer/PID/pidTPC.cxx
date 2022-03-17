@@ -144,7 +144,6 @@ struct tpcPid {
       if (flag.value != 1) {
         return;
       }
-      table.reserve(tracks.size());
     };
     // Prepare memory for enabled tables
     reserveTable(pidEl, tablePIDEl);
