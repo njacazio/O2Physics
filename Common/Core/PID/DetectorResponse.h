@@ -11,7 +11,7 @@
 
 ///
 /// \file   DetectorResponse.h
-/// \author Nicolo' Jacazio
+/// \author Nicolò Jacazio nicolo.jacazio@cern.ch
 /// \since  2020-07-30
 /// \brief  Handler for any detector (or other entity) response.
 ///         This provides the basic quantities computed by any response i.e. expected values, resolutions and Nsigmas
