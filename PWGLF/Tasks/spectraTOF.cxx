@@ -380,7 +380,7 @@ struct tofSpectra {
   using TrackCandidatesTiny = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
                                         aod::pidTOFPi, aod::pidTOFKa, aod::pidTOFPr, aod::pidTOFDe,
                                         aod::pidTPCPi, aod::pidTPCKa, aod::pidTPCPr, aod::pidTPCDe,
-                                        aod::pidTOFFullFlags, aod::TrackSelection>;
+                                        aod::pidTOFFlags, aod::TrackSelection>;
 
   void processTiny(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision,
                    TrackCandidatesTiny const& tracks)
