@@ -369,18 +369,18 @@ struct tofSpectra {
     }
   }
 
-  PROCESS_SWITCH(tofSpectra, processFull, "Process With full tables", false);
-
   void processFull(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision,
                    TrackCandidatesFull const& tracks)
   {
     processData<true>(collision, tracks);
   } // end of the process function
 
-  using TrackCandidatesTiny = soa::Join<aod::Tracks, aod::TracksExtra,
+  PROCESS_SWITCH(tofSpectra, processFull, "Process With full tables", false);
+
+  using TrackCandidatesTiny = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended,
                                         aod::pidTOFPi, aod::pidTOFKa, aod::pidTOFPr, aod::pidTOFDe,
                                         aod::pidTPCPi, aod::pidTPCKa, aod::pidTPCPr, aod::pidTPCDe,
-                                        aod::TrackSelection>;
+                                        aod::pidTOFFullFlags, aod::TrackSelection>;
 
   void processTiny(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision,
                    TrackCandidatesTiny const& tracks)
