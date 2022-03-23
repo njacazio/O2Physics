@@ -671,9 +671,9 @@ enum PIDFlags : uint8_t {
   T0TOF = 0x1
 };
 }
-DECLARE_SOA_COLUMN(Flags, flags, uint8_t);         //! Flag for the complementary PID information
-DECLARE_SOA_COLUMN(FlagsFull, flagsFull, uint8_t); //! Flag for the complementary PID information
-DECLARE_SOA_DYNAMIC_COLUMN(IsT0TOF, isT0TOF,       //! True if the T0 TOF was used to compute the TOF response
+DECLARE_SOA_COLUMN(TOFFlags, tofFlags, uint8_t);         //! Flag for the complementary PID information
+DECLARE_SOA_COLUMN(TOFFlagsFull, tofFlagsFull, uint8_t); //! Flag for the complementary PID information
+DECLARE_SOA_DYNAMIC_COLUMN(IsT0TOF, isT0TOF,             //! True if the T0 TOF was used to compute the TOF response
                            [](uint8_t flags) -> bool { return (flags & enums::PIDFlags::T0TOF) == enums::PIDFlags::T0TOF; });
 
 } // namespace pidflags
@@ -809,12 +809,12 @@ DECLARE_SOA_TABLE(pidTOFbeta, "AOD", "pidTOFbeta", //! Table of the TOF beta
                   pidtofbeta::DiffBetaEl<pidtofbeta::Beta, pidtofbeta::ExpBetaEl>);
 
 DECLARE_SOA_TABLE(pidTOFFlags, "AOD", "pidTOFFlags", //! Table of the PID flags
-                  pidflags::Flags,
-                  pidflags::IsT0TOF<pidflags::Flags>);
+                  pidflags::TOFFlags,
+                  pidflags::IsT0TOF<pidflags::TOFFlags>);
 
 DECLARE_SOA_TABLE(pidTOFFullFlags, "AOD", "pidTOFFullFlags", //! Table of the PID flags for the full tables
-                  pidflags::FlagsFull,
-                  pidflags::IsT0TOF<pidflags::FlagsFull>);
+                  pidflags::TOFFlagsFull,
+                  pidflags::IsT0TOF<pidflags::TOFFlagsFull>);
 
 // Per particle tables
 DECLARE_SOA_TABLE(pidTOFFullEl, "AOD", "pidTOFFullEl", //! Table of the TOF (full) response with expected signal, expected resolution and Nsigma for electron
