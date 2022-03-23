@@ -69,9 +69,8 @@ class TrackSelection
         abs(track.dcaXY()) <= ((mMaxDcaXYPtDep) ? mMaxDcaXYPtDep(track.pt()) : mMaxDcaXY) &&
         abs(track.dcaZ()) <= mMaxDcaZ) {
       return true;
-    } else {
-      return false;
     }
+    return false;
   }
 
   // Temporary function to check if track passes a given selection criteria. To be replaced by framework filters.
