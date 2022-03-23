@@ -11,7 +11,7 @@
 
 ///
 /// \file   spectraTOFtiny.h
-/// \author Nicolo' Jacazio
+/// \author Nicolò Jacazio nicolo.jacazio@cern.ch
 ///
 /// \brief Task for the analysis of the spectra with the TOF detector using the tiny tables
 ///
@@ -23,15 +23,29 @@
 #include "Framework/HistogramRegistry.h"
 #include "Common/Core/PID/PIDResponse.h"
 #include "Common/DataModel/TrackSelectionTables.h"
+#include "Common/DataModel/EventSelection.h"
+#include "Common/Core/TrackSelection.h"
+#include "Framework/StaticFor.h"
+#include "Common/Core/TrackSelectionDefaults.h"
+
+#include "TPDGCode.h"
 
 using namespace o2;
+using namespace o2::track;
 using namespace o2::framework;
 using namespace o2::framework::expressions;
 
 // Spectra task
 struct tofSpectraTiny {
-  static constexpr int Np = 9;
-  static constexpr const char* pT[Np] = {"e", "#mu", "#pi", "K", "p", "d", "t", "^{3}He", "#alpha"};
+  static constexpr PID::ID Np = 9;
+  static constexpr PID::ID NpCharge = Np * 2;
+  static constexpr const char* pT[Np] = {"e", "#mu", "#pi", "K", "p", "d", "t", "{}^{3}He", "#alpha"};
+  static constexpr const char* pTCharge[NpCharge] = {"e^{-}", "#mu^{-}", "#pi^{+}", "K^{+}", "p", "d", "t", "{}^{3}He", "#alpha",
+                                                     "e^{+}", "#mu^{+}", "#pi^{-}", "K^{-}", "#bar{p}", "#bar{d}", "#bar{t}", "{}^{3}#bar{He}", "#bar{#alpha}"};
+  static constexpr int PDGs[NpCharge] = {kElectron, kMuonMinus, kPiPlus, kKPlus, kProton, 1000010020, 1000010030, 1000020030, 1000020040,
+                                         -kElectron, -kMuonMinus, -kPiPlus, -kKPlus, -kProton, -1000010020, -1000010030, -1000020030, -1000020040};
+  static constexpr bool enabledParticle[NpCharge] = {0, 0, 1, 1, 1, 1, 0, 0, 0,
+                                                     0, 0, 1, 1, 1, 1, 0, 0, 0};
   static constexpr std::string_view hp[Np] = {"p/El", "p/Mu", "p/Pi", "p/Ka", "p/Pr", "p/De", "p/Tr", "p/He", "p/Al"};
   static constexpr std::string_view hpt[Np] = {"pt/El", "pt/Mu", "pt/Pi", "pt/Ka", "pt/Pr", "pt/De", "pt/Tr", "pt/He", "pt/Al"};
   HistogramRegistry histos{"Histos", {}, OutputObjHandlingPolicy::AnalysisObject};
