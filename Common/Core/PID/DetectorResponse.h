@@ -11,7 +11,7 @@
 
 ///
 /// \file   DetectorResponse.h
-/// \author Nicolo' Jacazio
+/// \author Nicolò Jacazio <nicolo.jacazio@cern.ch>
 /// \since  2020-07-30
 /// \brief  Handler for any detector (or other entity) response.
 ///         This provides the basic quantities computed by any response i.e. expected values, resolutions and Nsigmas
@@ -20,17 +20,11 @@
 #ifndef O2_ANALYSIS_PID_DETECTORRESPONSE_H_
 #define O2_ANALYSIS_PID_DETECTORRESPONSE_H_
 
+#include <Rtypes.h>
 #include <array>
 #include <vector>
-#include "Framework/Logger.h"
-// ROOT includes
-#include "Rtypes.h"
-#include "TMath.h"
-#include "TFile.h"
-
-// O2 includes
-#include "ReconstructionDataFormats/PID.h"
 #include "Common/Core/PID/ParamBase.h"
+#include <CCDB/BasicCCDBManager.h>
 
 namespace o2::pid
 {
@@ -42,9 +36,16 @@ class DetectorResponse
   virtual ~DetectorResponse() = default;
 
   /// Enumeration of the different types of parametrizations
-  enum Param_t { kSignal,
-                 kSigma,
-                 kNParams };
+
+  // enum class Param_t : uint8_t {
+  //   kSignal = 0,
+  //   kSigma,
+  //   kNParams
+  // };
+  typedef uint8_t Param_t;
+  static constexpr Param_t kSignal = 0;
+  static constexpr Param_t kSigma = 1;
+  static constexpr Param_t kNParams = 2;
 
   static constexpr std::array<char const*, kNParams> ParamName = {{"Signal", "Sigma"}};
 
@@ -52,12 +53,27 @@ class DetectorResponse
   /// \param fname File name used for input
   /// \param pname Name of the parametrization in the file
   /// \param ptype Type of the parametrization
-  void LoadParamFromFile(const TString fname, const TString pname, const Param_t ptype);
+  void LoadParamFromFile(const std::string& fname, const std::string& pname, const Param_t ptype);
 
   /// Setter for the parametrization
   /// \param ptype Type of the parametrization
   /// \param param Parametrization
   void LoadParam(const Param_t ptype, Parametrization* param);
+
+  /// Setter for the parametrization from the CCDB
+  /// \param ptype Type of the parametrization
+  /// \param path Path to the parametrization object
+  /// \param timestamp timestamp of the parametrization object
+  void LoadParamFromCCDB(const Param_t ptype, const std::string& path, long& timestamp);
+
+  /// Setter for the parametrization from the CCDB, in update mode, only if object is not valid anymore
+  /// \param ptype Type of the parametrization
+  /// \param timestamp timestamp of the parametrization object
+  void UpdateParamFromCCDB(const Param_t ptype, long& timestamp);
+
+  /// Setter for the CCDB handler to use for the loading of the parametrization
+  /// \param ccdb Configured CCDB object
+  void InitCCDBManager(o2::ccdb::BasicCCDBManager& ccdb) { mCCDBManager = &ccdb; }
 
   /// Getter for the parametrizations
   Parametrization* GetParam(const Param_t ptype) const { return mParam[ptype]; }
@@ -73,40 +89,11 @@ class DetectorResponse
   pidvar_t operator()(const Param_t ptype, const pidvar_t* x) const { return mParam[ptype]->operator()(x); }
 
  private:
-  /// Parametrizations for the expected signal and sigma
-  std::array<Parametrization*, kNParams> mParam;
+  std::array<Parametrization*, kNParams> mParam; /// Parametrizations for the expected signal and sigma
+  // Data members for auto updating the parametrizations
+  std::array<std::string, kNParams> mParamCCDBPaths; /// Array of paths on the CCDB used to fetch parametrizations, used in update mode
+  o2::ccdb::BasicCCDBManager* mCCDBManager;          /// Pointer to a configured CCDB manager, used to fetch and update parametrizations
 };
-
-inline void DetectorResponse::LoadParam(const Param_t ptype, Parametrization* param)
-{
-  if (!param) {
-    LOG(fatal) << "Got no param for parametrization " << ParamName[ptype];
-  }
-  mParam[ptype] = param;
-}
-
-inline void DetectorResponse::LoadParamFromFile(const TString fname, const TString pname, const Param_t ptype)
-{
-  TFile f(fname, "READ");
-  if (!f.Get(pname)) {
-    LOG(fatal) << "Did not find parametrization " << pname << " in file " << fname;
-  }
-  LOG(info) << "Loading parametrization " << pname << " from TFile " << fname;
-  f.GetObject(pname, mParam[ptype]);
-  f.Close();
-  mParam[ptype]->Print();
-}
-
-inline void DetectorResponse::SetParameters(const DetectorResponse::Param_t ptype, std::vector<pidvar_t> p)
-{
-  if (!mParam[ptype]) {
-    const std::string pname = std::string(ParamName[ptype]) + "_default_param";
-    LOG(info) << "Creating new parametrization " << pname << " of size " << p.size();
-    mParam[ptype] = new Parametrization(pname, p.size());
-    mParam[ptype]->Print();
-  }
-  mParam[ptype]->SetParameters(p);
-}
 
 } // namespace o2::pid
 
