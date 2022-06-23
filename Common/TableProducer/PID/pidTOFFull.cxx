@@ -53,8 +53,8 @@ struct tofPidFull {
   Produces<o2::aod::pidTOFFullTr> tablePIDTr;
   Produces<o2::aod::pidTOFFullHe> tablePIDHe;
   Produces<o2::aod::pidTOFFullAl> tablePIDAl;
-  // Detector response and input parameters
-  DetectorResponse response;
+  // Detector response parameters
+  o2::pid::tof::TOFResoParams mRespParams;
   Service<o2::ccdb::BasicCCDBManager> ccdb;
   Configurable<std::string> paramfile{"param-file", "", "Path to the parametrization object, if emtpy the parametrization is not taken from file"};
   Configurable<std::string> sigmaname{"param-sigma", "TOFReso", "Name of the parametrization for the expected sigma, used in both file and CCDB mode"};
@@ -100,16 +100,14 @@ struct tofPidFull {
     // Not later than now objects
     ccdb->setCreatedNotAfter(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     //
-    const std::vector<float> p = {0.008, 0.008, 0.002, 40.0};
-    response.SetParameters(DetectorResponse::kSigma, p);
     const std::string fname = paramfile.value;
     if (!fname.empty()) { // Loading the parametrization from file
       LOG(info) << "Loading exp. sigma parametrization from file" << fname << ", using param: " << sigmaname.value;
-      response.LoadParamFromFile(fname.data(), sigmaname.value, DetectorResponse::kSigma);
+      mRespParams.LoadParamFromFile(fname.data(), sigmaname.value);
     } else { // Loading it from CCDB
       parametrizationPath = ccdbPath.value + "/" + sigmaname.value;
       LOG(info) << "Loading exp. sigma parametrization from CCDB, using path: '" << parametrizationPath << "' for timestamp " << timestamp.value;
-      response.LoadParam(DetectorResponse::kSigma, ccdb->getForTimeStamp<Parametrization>(parametrizationPath, timestamp.value));
+      mRespParams.SetParameters(ccdb->getForTimeStamp<o2::pid::tof::TOFResoParams>(parametrizationPath, timestamp.value));
     }
   }
 
@@ -149,7 +147,7 @@ struct tofPidFull {
 
     int lastCollisionId = -1;          // Last collision ID analysed
     for (auto const& track : tracks) { // Loop on all tracks
-      if (!track.has_collision()) {    // Track was not assigned, cannot compute NSigma (no event time)
+      if (!track.has_collision()) {    // Track was not assigned, cannot compute NSigma (no event time) -> filling with empty table
         auto makeTableEmpty = [&](const Configurable<int>& flag, auto& table) {
           if (flag.value != 1) {
             return;
@@ -179,7 +177,7 @@ struct tofPidFull {
       timestamp.value = track.collision().bc_as<aod::BCsWithTimestamps>().timestamp();
       if (enableTimeDependentResponse) {
         LOG(debug) << "Updating parametrization from path '" << parametrizationPath << "' and timestamp " << timestamp.value;
-        response.LoadParam(DetectorResponse::kSigma, ccdb->getForTimeStamp<Parametrization>(parametrizationPath, timestamp));
+        mRespParams.SetParameters(ccdb->getForTimeStamp<o2::pid::tof::TOFResoParams>(parametrizationPath, timestamp));
       }
 
       const auto& tracksInCollision = tracks.sliceBy(perCollision, lastCollisionId);
@@ -189,8 +187,8 @@ struct tofPidFull {
           if (flag.value != 1) {
             return;
           }
-          table(responsePID.GetExpectedSigma(response, trkInColl),
-                responsePID.GetSeparation(response, trkInColl));
+          table(responsePID.GetExpectedSigma(mRespParams, trkInColl),
+                responsePID.GetSeparation(mRespParams, trkInColl));
         };
 
         makeTable(pidEl, tablePIDEl, responseEl);
@@ -203,6 +201,86 @@ struct tofPidFull {
         makeTable(pidHe, tablePIDHe, responseHe);
         makeTable(pidAl, tablePIDAl, responseAl);
       }
+    }
+  }
+
+  void processSimple(Trks const& tracks, aod::Collisions const&, aod::BCsWithTimestamps const&)
+  {
+    constexpr auto responseEl = ResponseImplementation<PID::Electron>();
+    constexpr auto responseMu = ResponseImplementation<PID::Muon>();
+    constexpr auto responsePi = ResponseImplementation<PID::Pion>();
+    constexpr auto responseKa = ResponseImplementation<PID::Kaon>();
+    constexpr auto responsePr = ResponseImplementation<PID::Proton>();
+    constexpr auto responseDe = ResponseImplementation<PID::Deuteron>();
+    constexpr auto responseTr = ResponseImplementation<PID::Triton>();
+    constexpr auto responseHe = ResponseImplementation<PID::Helium3>();
+    constexpr auto responseAl = ResponseImplementation<PID::Alpha>();
+
+    auto reserveTable = [&tracks](const Configurable<int>& flag, auto& table) {
+      if (flag.value != 1) {
+        return;
+      }
+      table.reserve(tracks.size());
+    };
+
+    reserveTable(pidEl, tablePIDEl);
+    reserveTable(pidMu, tablePIDMu);
+    reserveTable(pidPi, tablePIDPi);
+    reserveTable(pidKa, tablePIDKa);
+    reserveTable(pidPr, tablePIDPr);
+    reserveTable(pidDe, tablePIDDe);
+    reserveTable(pidTr, tablePIDTr);
+    reserveTable(pidHe, tablePIDHe);
+    reserveTable(pidAl, tablePIDAl);
+
+    int lastCollisionId = -1;          // Last collision ID analysed
+    for (auto const& track : tracks) { // Loop on all tracks
+      if (!track.has_collision()) {    // Track was not assigned, cannot compute NSigma (no event time) -> filling with empty table
+        auto makeTableEmpty = [&](const Configurable<int>& flag, auto& table) {
+          if (flag.value != 1) {
+            return;
+          }
+          table(-999.f, -999.f);
+        };
+
+        makeTableEmpty(pidEl, tablePIDEl);
+        makeTableEmpty(pidMu, tablePIDMu);
+        makeTableEmpty(pidPi, tablePIDPi);
+        makeTableEmpty(pidKa, tablePIDKa);
+        makeTableEmpty(pidPr, tablePIDPr);
+        makeTableEmpty(pidDe, tablePIDDe);
+        makeTableEmpty(pidTr, tablePIDTr);
+        makeTableEmpty(pidHe, tablePIDHe);
+        makeTableEmpty(pidAl, tablePIDAl);
+
+        continue;
+      }
+
+      if (enableTimeDependentResponse && (track.collisionId() != lastCollisionId)) { // Time dependent calib is enabled and this is a new collision
+        lastCollisionId = track.collisionId();                                       // Cache last collision ID
+        timestamp.value = track.collision().bc_as<aod::BCsWithTimestamps>().timestamp();
+        LOG(debug) << "Updating parametrization from path '" << parametrizationPath << "' and timestamp " << timestamp.value;
+        mRespParams.SetParameters(ccdb->getForTimeStamp<o2::pid::tof::TOFResoParams>(parametrizationPath, timestamp));
+      }
+
+      // Check and fill enabled tables
+      auto makeTable = [&track, this](const Configurable<int>& flag, auto& table, const auto& responsePID) {
+        if (flag.value != 1) {
+          return;
+        }
+        table(responsePID.GetExpectedSigma(mRespParams, track),
+              responsePID.GetSeparation(mRespParams, track));
+      };
+
+      makeTable(pidEl, tablePIDEl, responseEl);
+      makeTable(pidMu, tablePIDMu, responseMu);
+      makeTable(pidPi, tablePIDPi, responsePi);
+      makeTable(pidKa, tablePIDKa, responseKa);
+      makeTable(pidPr, tablePIDPr, responsePr);
+      makeTable(pidDe, tablePIDDe, responseDe);
+      makeTable(pidTr, tablePIDTr, responseTr);
+      makeTable(pidHe, tablePIDHe, responseHe);
+      makeTable(pidAl, tablePIDAl, responseAl);
     }
   }
 };
