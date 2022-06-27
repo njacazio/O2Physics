@@ -122,11 +122,12 @@ int main(int argc, char* argv[])
   if (mode == 0) { // Push mode
     LOG(info) << "Handling TOF parametrization in create mode";
     const std::string input_file_name = arguments["read-from-file"].as<std::string>();
+    reso = new TOFResoParams();
     if (!input_file_name.empty()) { // Load parameters from input file
-      reso = new TOFResoParams();
+      LOG(info) << "Loading parameters from file";
       reso->LoadParamFromFile(input_file_name.c_str(), reso_name.c_str());
     } else { // Create new object
-      reso = new TOFResoParams();
+      LOG(info) << "Loading parameters from command line";
       reso->SetParameters(std::array<float, 5>{arguments["p0"].as<float>(),
                                                arguments["p1"].as<float>(),
                                                arguments["p2"].as<float>(),
@@ -149,6 +150,7 @@ int main(int argc, char* argv[])
       if (runnumber != 0) {
         metadata["runnumber"] = Form("%i", runnumber);
       }
+      reso->AddToMetadata(metadata);
       // Storing parametrization parameters
       storeOnCCDB(path + "/Parameters/" + reso_name, metadata, start, stop, reso);
     }
@@ -158,7 +160,7 @@ int main(int argc, char* argv[])
     reso = retrieveFromCCDB<TOFResoParams>(path + "/" + reso_name, timestamp);
     reso->Print();
     using RespImp = ExpTimes<DebugTrack, 2>;
-    LOG(info) << "TOF expected resolution at p=" << debugTrack.p() << " GeV/c and mass " << RespImp::mMass << ":" << RespImp::GetExpectedSigma(*reso, debugTrack);
+    LOG(info) << "TOF expected resolution at p=" << debugTrack.p() << " GeV/c and mass " << RespImp::mMassZ << ":" << RespImp::GetExpectedSigma(*reso, debugTrack);
   } else { // Create and test + performance
     LOG(info) << "Creating TOF parametrization and testing";
     reso = new TOFResoParams();
@@ -215,14 +217,17 @@ int main(int argc, char* argv[])
       graphs["NSigmaOld"]->SetPoint(i, debugTrack.p(), RespImp::GetSeparation(*reso, debugTrack));
       graphs["durationNSigmaOld"]->SetPoint(i + 1, i, duration);
     }
-    TFile fdebug("/tmp/tofParamDebug.root", "RECREATE");
+    TFile fdebug("/tmp/tofParamDebug.root", "UPDATE");
+    TString dn = Form("%i", fdebug.GetListOfKeys().GetEntries());
+    fdebug.mkdir(dn);
+    fdebug.cd(dn);
     for (const auto& i : graphs) {
       i.second->SetName(i.first.c_str());
       i.second->SetTitle(i.first.c_str());
       i.second->Write();
     }
     fdebug.Close();
-    LOG(info) << "TOF expected resolution at p=" << debugTrack.p() << " GeV/c and mass " << RespImp::mMass << ": " << RespImp::GetExpectedSigma(*reso, debugTrack) << " ps";
+    LOG(info) << "TOF expected resolution at p=" << debugTrack.p() << " GeV/c and mass " << RespImp::mMassZ << ": " << RespImp::GetExpectedSigma(*reso, debugTrack) << " ps";
   }
 
   return 0;
