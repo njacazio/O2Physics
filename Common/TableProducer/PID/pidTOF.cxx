@@ -77,6 +77,10 @@ struct tofPid {
 
   void init(o2::framework::InitContext& initContext)
   {
+    if (doprocessWSlice == true && doprocessWoSlice == true) {
+      LOGF(fatal, "Cannot enable processWoSlice and processWSlice at the same time. Please choose one.");
+    }
+
     // Checking the tables are requested in the workflow and enabling them
     auto enableFlag = [&](const std::string particle, Configurable<int>& flag) {
       enableFlagIfTableRequired(initContext, "pidTOF" + particle, flag);
@@ -116,7 +120,7 @@ struct tofPid {
   Preslice<Trks> perCollision = aod::track::collisionId;
   template <o2::track::PID::ID pid>
   using ResponseImplementation = o2::pid::tof::ExpTimes<Trks::iterator, pid>;
-  void process(Trks const& tracks, aod::Collisions const&, aod::BCsWithTimestamps const&)
+  void processWSlice(Trks const& tracks, aod::Collisions const&, aod::BCsWithTimestamps const&)
   {
     constexpr auto responseEl = ResponseImplementation<PID::Electron>();
     constexpr auto responseMu = ResponseImplementation<PID::Muon>();
@@ -204,8 +208,9 @@ struct tofPid {
       }
     }
   }
+  PROCESS_SWITCH(pidTOF, processSlice, "Process with track slices", true);
 
-  void processSimple(Trks const& tracks, aod::Collisions const&, aod::BCsWithTimestamps const&)
+  void processWoSlice(Trks const& tracks, aod::Collisions const&, aod::BCsWithTimestamps const&)
   {
     constexpr auto responseEl = ResponseImplementation<PID::Electron>();
     constexpr auto responseMu = ResponseImplementation<PID::Muon>();
@@ -285,6 +290,7 @@ struct tofPid {
       makeTable(pidAl, tablePIDAl, responseAl);
     }
   }
+  PROCESS_SWITCH(pidTOF, processWoSlice, "Process without track slices", false);
 };
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
