@@ -208,7 +208,7 @@ struct tofPid {
       }
     }
   }
-  PROCESS_SWITCH(pidTOF, processSlice, "Process with track slices", true);
+  PROCESS_SWITCH(tofPid, processWSlice, "Process with track slices", true);
 
   void processWoSlice(Trks const& tracks, aod::Collisions const&, aod::BCsWithTimestamps const&)
   {
@@ -290,7 +290,7 @@ struct tofPid {
       makeTable(pidAl, tablePIDAl, responseAl);
     }
   }
-  PROCESS_SWITCH(pidTOF, processWoSlice, "Process without track slices", false);
+  PROCESS_SWITCH(tofPid, processWoSlice, "Process without track slices", false);
 };
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
