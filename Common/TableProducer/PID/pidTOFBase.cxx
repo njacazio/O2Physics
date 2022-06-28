@@ -15,22 +15,25 @@
 /// \brief  Base to build tasks for TOF PID tasks.
 ///
 
+// O2 includes
+#include <CCDB/BasicCCDBManager.h>
+#include "TOFBase/EventTimeMaker.h"
 #include "Framework/AnalysisTask.h"
-#include "Framework/RunningWorkflowInfo.h"
+#include "ReconstructionDataFormats/Track.h"
+
+// O2Physics includes
 #include "Common/DataModel/PIDResponse.h"
 #include "Common/DataModel/TrackSelectionTables.h"
 #include "Common/DataModel/EventSelection.h"
 #include "Common/DataModel/FT0Corrected.h"
-#include <CCDB/BasicCCDBManager.h>
 #include "TableHelper.h"
-#include "TOFBase/EventTimeMaker.h"
 #include "pidTOFBase.h"
 
 using namespace o2;
-using namespace o2::pid;
-using namespace o2::track;
 using namespace o2::framework;
+using namespace o2::pid;
 using namespace o2::framework::expressions;
+using namespace o2::track;
 
 void customize(std::vector<o2::framework::ConfigParamSpec>& workflowOptions)
 {

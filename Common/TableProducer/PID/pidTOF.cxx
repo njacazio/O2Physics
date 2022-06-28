@@ -18,9 +18,12 @@
 ///
 
 // O2 includes
+#include <CCDB/BasicCCDBManager.h>
+#include "TOFBase/EventTimeMaker.h"
 #include "Framework/AnalysisTask.h"
 #include "ReconstructionDataFormats/Track.h"
-#include <CCDB/BasicCCDBManager.h>
+
+// O2Physics includes
 #include "Common/DataModel/PIDResponse.h"
 #include "TableHelper.h"
 #include "pidTOFBase.h"
@@ -109,8 +112,11 @@ struct tofPid {
       mRespParams.LoadParamFromFile(fname.data(), sigmaname.value);
     } else { // Loading it from CCDB
       parametrizationPath = ccdbPath.value + "/" + sigmaname.value;
-      LOG(info) << "Loading exp. sigma parametrization from CCDB, using path: '" << parametrizationPath << "' for timestamp " << timestamp.value;
-      mRespParams.SetParameters(ccdb->getForTimeStamp<o2::pid::tof::TOFResoParams>(parametrizationPath, timestamp.value));
+      if (!enableTimeDependentResponse) {
+        LOG(info) << "Loading exp. sigma parametrization from CCDB, using path: '" << parametrizationPath << "' for timestamp " << timestamp.value;
+        mRespParams.SetParameters(ccdb->getForTimeStamp<o2::pid::tof::TOFResoParams>(parametrizationPath, timestamp.value));
+        mRespParams.Print();
+      }
     }
   }
 
