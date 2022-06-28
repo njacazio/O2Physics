@@ -143,15 +143,15 @@ class PidParameters : public TNamed
   void Print(Option_t* option = "") const override
   {
     LOG(info) << "PidParameters '" << fName << "'";
-    for (unsigned int i = 0; i < size(); i++) {
-      LOG(info) << "Parameter " << i << "/" << size() - 1 << " is " << mPar[i];
+    for (int i = 0; i < nPar; i++) {
+      LOG(info) << "Parameter " << i << "/" << nPar - 1 << " is " << mPar[i];
     }
   }
 
   /// Adds the parameters to the metadata
   void AddToMetadata(std::map<std::string, std::string>& metadata) const
   {
-    for (unsigned int i = 0; i < size(); i++) {
+    for (int i = 0; i < nPar; i++) {
       metadata[Form("p%i", i)] = Form("%f", mPar[i]);
     }
   }
@@ -179,7 +179,7 @@ class PidParameters : public TNamed
 
   /// Getter for the size of the parameter
   /// \return returns the size of the parameter array
-  unsigned int size() const { return mPar.size(); }
+  static int size() { return nPar; }
 
   /// Getter of the parameter at position i
   /// \param i index of the parameter to get

@@ -17,17 +17,16 @@
 ///         This provides the basic quantities computed by any response i.e. expected values, resolutions and Nsigmas
 ///
 
-#include "DetectorResponse.h"
-
-#include "Framework/Logger.h"
 // ROOT includes
 #include "Rtypes.h"
 #include "TMath.h"
 #include "TFile.h"
 
 // O2 includes
+#include "Framework/Logger.h"
 #include "ReconstructionDataFormats/PID.h"
-#include "Common/Core/PID/ParamBase.h"
+#include "PID/ParamBase.h"
+#include "DetectorResponse.h"
 
 using namespace o2::pid;
 

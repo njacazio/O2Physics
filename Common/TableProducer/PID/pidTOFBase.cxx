@@ -17,7 +17,6 @@
 
 #include "Framework/AnalysisTask.h"
 #include "Framework/RunningWorkflowInfo.h"
-#include "Common/Core/PID/PIDTOF.h"
 #include "Common/DataModel/PIDResponse.h"
 #include "Common/DataModel/TrackSelectionTables.h"
 #include "Common/DataModel/EventSelection.h"

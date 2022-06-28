@@ -23,7 +23,6 @@
 #include <Rtypes.h>
 #include <array>
 #include <vector>
-#include "Common/Core/PID/ParamBase.h"
 #include <CCDB/BasicCCDBManager.h>
 
 namespace o2::pid
