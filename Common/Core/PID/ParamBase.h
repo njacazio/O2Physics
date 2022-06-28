@@ -99,7 +99,7 @@ class Parameters : public TNamed
   /// Vector of the parameter
   std::vector<pidvar_t> mPar;
 
-  ClassDef(Parameters, 1); // Container for parameter of parametrizations
+  ClassDefOverride(Parameters, 1); // Container for parameter of parametrizations
 };
 
 /// \brief Class to handle the parameters of a given detector response
@@ -190,7 +190,7 @@ class PidParameters : public TNamed
   /// Array of the parameter
   std::array<pidvar_t, nPar> mPar;
 
-  ClassDef(PidParameters, 1); // Container for parameter of parametrizations
+  ClassDefOverride(PidParameters, 1); // Container for parameter of parametrizations
 };
 
 class Parametrization : public TNamed
@@ -247,7 +247,7 @@ class Parametrization : public TNamed
   /// Parameters of the parametrization
   Parameters mParameters;
 
-  ClassDef(Parametrization, 1); // Container for the parametrization of the response function
+  ClassDefOverride(Parametrization, 1); // Container for the parametrization of the response function
 };
 
 } // namespace o2::pid

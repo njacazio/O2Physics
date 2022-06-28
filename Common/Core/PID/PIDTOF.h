@@ -120,7 +120,7 @@ class TOFMass
 class TOFResoParams : public o2::pid::PidParameters<5>
 {
  public:
-  TOFResoParams() : PidParameters("TOFResoParams") { SetParameters(std::array<float, 5>{0.008, 0.008, 0.002, 40.0}); }; // Default constructor with default parameters
+  TOFResoParams() : PidParameters("TOFResoParams") { SetParameters(std::array<float, 5>{0.008, 0.008, 0.002, 40.0, 60.0}); }; // Default constructor with default parameters
   ~TOFResoParams() = default;
   ClassDef(TOFResoParams, 1);
 };
