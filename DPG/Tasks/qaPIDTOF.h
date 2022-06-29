@@ -172,8 +172,20 @@ struct tofPidQa {
     }
     histos.add("event/trackmultiplicity", "", kTH1F, {multAxis});
     histos.add("event/tofmultiplicity", "", kTH1F, {multAxis});
-    histos.add("event/colltime", "", kTH1F, {colTimeAxis});
-    histos.add("event/colltimereso", "", kTH2F, {multAxis, colTimeResoAxis});
+
+    histos.add("event/evtime/colltime", "collisionTime", kTH1F, {colTimeAxis});
+    histos.add("event/evtime/colltimereso", "collisionTimeRes", kTH2F, {multAxis, colTimeResoAxis});
+    histos.add("event/evtime/undef", "Undefined event time", kTH1F, {colTimeAxis});
+    histos.add("event/evtime/undefreso", "Undefined event time reso.", kTH2F, {multAxis, colTimeResoAxis});
+    histos.add("event/evtime/avail", "Available event time", kTH1F, {colTimeAxis});
+    histos.add("event/evtime/availreso", "Available event time reso.", kTH2F, {multAxis, colTimeResoAxis});
+    histos.add("event/evtime/ft0tof", "FT0+TOF event time", kTH1F, {colTimeAxis});
+    histos.add("event/evtime/ft0tofreso", "FT0+TOF event time reso.", kTH2F, {multAxis, colTimeResoAxis});
+    histos.add("event/evtime/tof", "TOF event time", kTH1F, {colTimeAxis});
+    histos.add("event/evtime/tofreso", "TOF event time reso.", kTH2F, {multAxis, colTimeResoAxis});
+    histos.add("event/evtime/ft0", "FT0 event time", kTH1F, {colTimeAxis});
+    histos.add("event/evtime/ft0reso", "FT0 event time reso.", kTH2F, {multAxis, colTimeResoAxis});
+
     histos.add("event/tofsignal", "", kTH2F, {pAxis, tofAxis});
     histos.add("event/pexp", "", kTH2F, {pAxis, pExpAxis});
     histos.add("event/eta", "", kTH1F, {etaAxis});
@@ -215,6 +227,8 @@ struct tofPidQa {
     int tofmult = 0;
     float evtime = 0.f;
     float evtimereso = 0.f;
+    int evtimeflag = 0;
+
     if constexpr (fillHistograms) {
       for (auto t : tracks) {
         if (applyTrackCut && !t.isGlobalTrack()) {
@@ -227,6 +241,17 @@ struct tofPidQa {
         tofmult++;
         evtime = t.tofEvTime();
         evtimereso = t.tofEvTimeErr();
+        evtimeflag = 0;
+        if (t.isEvTimeDefined()) {
+          evtimeflag = 1;
+        }
+        if (t.isEvTimeTOF() && t.isEvTimeT0AC()) {
+          evtimeflag = 2;
+        } else if (t.isEvTimeTOF()) {
+          evtimeflag = 3;
+        } else if (t.isEvTimeT0AC()) {
+          evtimeflag = 4;
+        }
       }
       histos.fill(HIST("event/evsel"), 3);
     }
@@ -239,8 +264,35 @@ struct tofPidQa {
       histos.fill(HIST("event/trackmultiplicity"), ntracks);
       histos.fill(HIST("event/tofmultiplicity"), tofmult);
 
-      histos.fill(HIST("event/colltime"), evtime);
-      histos.fill(HIST("event/colltimereso"), tofmult, evtimereso);
+      const float collisionTime_ps = collision.collisionTime() * 1000.f;
+      histos.fill(HIST("event/evtime/colltime"), collisionTime_ps);
+      histos.fill(HIST("event/evtime/colltimereso"), tofmult, collision.collisionTimeRes() * 1000.f);
+
+      switch (evtimeflag) {
+        case 0:
+          histos.fill(HIST("event/evtime/undef"), evtime);
+          histos.fill(HIST("event/evtime/undefreso"), tofmult, evtimereso);
+          break;
+        case 1:
+          histos.fill(HIST("event/evtime/avail"), evtime);
+          histos.fill(HIST("event/evtime/availreso"), tofmult, evtimereso);
+          break;
+        case 2:
+          histos.fill(HIST("event/evtime/ft0tof"), evtime);
+          histos.fill(HIST("event/evtime/ft0tofreso"), tofmult, evtimereso);
+          break;
+        case 3:
+          histos.fill(HIST("event/evtime/tof"), evtime);
+          histos.fill(HIST("event/evtime/tofreso"), tofmult, evtimereso);
+          break;
+        case 4:
+          histos.fill(HIST("event/evtime/tof"), evtime);
+          histos.fill(HIST("event/evtime/tofreso"), tofmult, evtimereso);
+          break;
+        default:
+          LOG(fatal) << "Unrecognized Event time flag";
+          break;
+      }
     }
     return true;
   }
