@@ -13,16 +13,17 @@
 /// \file   handleParamTOFReso.cxx
 /// \author Nicolò Jacazio nicolo.jacazio@cern.ch
 /// \since  2020-06-22
-/// \brief  A simple tool to produce Bethe Bloch parametrization objects for the TOF PID Response
+/// \brief  A simple tool to produce resolution parametrization objects for the TOF PID Response
 ///
 
 #include "TGraph.h"
 #include "TSystem.h"
 #include "TCanvas.h"
 
-#include "Common/Core/PID/TOFReso.h"
-#include "Common/Core/PID/DetectorResponse.h"
-#include "Common/Core/PID/PIDTOF.h"
+#include "PID/ParamBase.h"
+#include "PID/DetectorResponse.h"
+#include "PID/PIDTOF.h"
+#include "PID/TOFReso.h"
 #include "handleParamBase.h"
 
 #include <chrono>
@@ -30,6 +31,7 @@ using namespace std::chrono;
 using namespace o2::pid::tof;
 using namespace o2::pid;
 
+// Utility class
 struct DebugTrack { // Track that mimics the O2 data structure
   float mp = 0.1f;
   float p() const { return mp; }
@@ -52,25 +54,15 @@ struct DebugTrack { // Track that mimics the O2 data structure
 bool initOptionsAndParse(bpo::options_description& options, int argc, char* argv[])
 {
   options.add_options()(
-    "url,u", bpo::value<std::string>()->default_value("http://alice-ccdb.cern.ch"), "URL of the CCDB database e.g. http://ccdb-test.cern.ch:8080 or http://alice-ccdb.cern.ch")(
     "ccdb-path,c", bpo::value<std::string>()->default_value("Analysis/PID/TOF"), "CCDB path for storage/retrieval")(
-    "rct-path", bpo::value<std::string>()->default_value("RCT/Info/RunInformation"), "path to the ccdb RCT objects for the SOR/EOR timestamps")(
-    "start,s", bpo::value<long>()->default_value(0), "Start timestamp of object validity. If 0 and runnumber != 0 it will be set to the run SOR")(
-    "stop,S", bpo::value<long>()->default_value(0), "Stop timestamp of object validity. If 0 and runnumber != 0 it will be set to the run EOR")(
-    "timestamp,T", bpo::value<long>()->default_value(-1), "Timestamp of the object to retrieve, used in alternative to the run number")(
-    "runnumber,R", bpo::value<unsigned int>()->default_value(0), "Timestamp of the object to retrieve, used in alternative to the timestamp (if 0 using the timestamp)")(
-    "delete-previous,delete_previous,d", bpo::value<int>()->default_value(0), "Flag to delete previous versions of converter objects in the CCDB before uploading the new one so as to avoid proliferation on CCDB")(
-    "save-to-file,file,f,o", bpo::value<std::string>()->default_value(""), "Option to save parametrization to file instead of uploading to ccdb")(
-    "read-from-file,i", bpo::value<std::string>()->default_value(""), "Option to get parametrization from a file")(
-    "reso-name,n", bpo::value<std::string>()->default_value("TOFReso"), "Name of the parametrization object")(
-    "mode,m", bpo::value<unsigned int>()->default_value(1), "Working mode: 0 push 1 pull and test")(
+    "reso-name,n", bpo::value<std::string>()->default_value("TOFResoParams"), "Name of the parametrization object")(
+    "mode,m", bpo::value<unsigned int>()->default_value(1), "Working mode: 0 push, 1 pull and test, 2 create and performance")(
     "p0", bpo::value<float>()->default_value(0.008f), "Parameter 0 of the TOF resolution")(
     "p1", bpo::value<float>()->default_value(0.008f), "Parameter 1 of the TOF resolution")(
     "p2", bpo::value<float>()->default_value(0.002f), "Parameter 2 of the TOF resolution")(
     "p3", bpo::value<float>()->default_value(40.0f), "Parameter 3 of the TOF resolution")(
-    "p4", bpo::value<float>()->default_value(60.0f), "Parameter 4 of the TOF resolution: average TOF resolution")(
-    "verbose,v", bpo::value<int>()->default_value(0), "Verbose level 0, 1")(
-    "help,h", "Produce help message.");
+    "p4", bpo::value<float>()->default_value(60.0f), "Parameter 4 of the TOF resolution: average TOF resolution");
+  setStandardOpt(options);
   try {
     bpo::store(parse_command_line(argc, argv, options), arguments);
 
@@ -99,33 +91,23 @@ int main(int argc, char* argv[])
 
   // Fetch options
   const auto mode = arguments["mode"].as<unsigned int>();
-  const auto runnumber = arguments["runnumber"].as<unsigned int>();
-  auto timestamp = arguments["timestamp"].as<long>();
-  const auto path = arguments["ccdb-path"].as<std::string>();
-  auto start = arguments["start"].as<long>();
-  auto stop = arguments["stop"].as<long>();
+  const auto ccdbPath = arguments["ccdb-path"].as<std::string>() + "/" + arguments["reso-name"].as<std::string>();
 
   // Init CCDB
-  const std::string url = arguments["url"].as<std::string>();
-  api.init(url);
-  if (!api.isHostReachable()) {
-    LOG(warning) << "CCDB host " << url << " is not reacheable, cannot go forward";
-    return 1;
-  }
+  initCCDBApi();
 
   // Init timestamps
-  setupTimestamps(timestamp, start, stop);
+  setupTimestamps(ccdbTimestamp, validityStart, validityStop);
 
   TOFReso* resoOld = nullptr;
   TOFResoParams* reso = nullptr;
-  const std::string reso_name = arguments["reso-name"].as<std::string>();
   if (mode == 0) { // Push mode
     LOG(info) << "Handling TOF parametrization in create mode";
     const std::string input_file_name = arguments["read-from-file"].as<std::string>();
     reso = new TOFResoParams();
     if (!input_file_name.empty()) { // Load parameters from input file
       LOG(info) << "Loading parameters from file";
-      reso->LoadParamFromFile(input_file_name.c_str(), reso_name.c_str());
+      reso->LoadParamFromFile(input_file_name.c_str(), arguments["reso-name"].as<std::string>().c_str());
     } else { // Create new object
       LOG(info) << "Loading parameters from command line";
       reso->SetParameters(std::array<float, 5>{arguments["p0"].as<float>(),
@@ -143,21 +125,22 @@ int main(int argc, char* argv[])
       f.ls();
       f.Close();
     } else { // Saving it to CCDB
-      LOG(info) << "Saving parametrization to CCDB " << path << " with validity " << start << " "
-                << stop;
+      LOG(info) << "Saving parametrization to CCDB " << ccdbPath << " with validity " << validityStart << " "
+                << validityStop;
 
       std::map<std::string, std::string> metadata;
-      if (runnumber != 0) {
-        metadata["runnumber"] = Form("%i", runnumber);
+      if (minRunNumber != 0) {
+        metadata["min-runnumber"] = Form("%i", minRunNumber);
+        metadata["max-runnumber"] = Form("%i", maxRunNumber);
       }
       reso->AddToMetadata(metadata);
       // Storing parametrization parameters
-      storeOnCCDB(path + "/Parameters/" + reso_name, metadata, start, stop, reso);
+      storeOnCCDB(ccdbPath, metadata, validityStart, validityStop, reso);
     }
   } else if (mode == 1) { // Pull and test mode
     LOG(info) << "Handling TOF parametrization in test mode for timestamp "
-              << timestamp << " -> " << timeStampToHReadble(timestamp);
-    reso = retrieveFromCCDB<TOFResoParams>(path + "/" + reso_name, timestamp);
+              << ccdbTimestamp << " -> " << timeStampToHReadble(ccdbTimestamp);
+    reso = retrieveFromCCDB<TOFResoParams>(ccdbPath, ccdbTimestamp);
     reso->Print();
     using RespImp = ExpTimes<DebugTrack, 2>;
     LOG(info) << "TOF expected resolution at p=" << debugTrack.p() << " GeV/c and mass " << RespImp::mMassZ << ":" << RespImp::GetExpectedSigma(*reso, debugTrack);
@@ -218,7 +201,8 @@ int main(int argc, char* argv[])
       graphs["durationNSigmaOld"]->SetPoint(i + 1, i, duration);
     }
     TFile fdebug("/tmp/tofParamDebug.root", "UPDATE");
-    TString dn = Form("%i", fdebug.GetListOfKeys().GetEntries());
+    TString dn = Form("%i", fdebug.GetListOfKeys()->GetEntries());
+    LOG(info) << "Saving performance graphs to " << fdebug.GetName() << " iteration " << dn;
     fdebug.mkdir(dn);
     fdebug.cd(dn);
     for (const auto& i : graphs) {
