@@ -211,8 +211,10 @@ struct tofPidQa {
     }
 
     // Computing Multiplicity first
-    float ntracks = 0;
+    int ntracks = 0;
     int tofmult = 0;
+    float evtime = 0.f;
+    float evtimereso = 0.f;
     if constexpr (fillHistograms) {
       for (auto t : tracks) {
         if (applyTrackCut && !t.isGlobalTrack()) {
@@ -223,6 +225,8 @@ struct tofPidQa {
           continue;
         }
         tofmult++;
+        evtime = t.tofEvTime();
+        evtimereso = t.tofEvTimeErr();
       }
       histos.fill(HIST("event/evsel"), 3);
     }
@@ -235,9 +239,8 @@ struct tofPidQa {
       histos.fill(HIST("event/trackmultiplicity"), ntracks);
       histos.fill(HIST("event/tofmultiplicity"), tofmult);
 
-      const float collisionTime_ps = collision.collisionTime() * 1000.f;
-      histos.fill(HIST("event/colltime"), collisionTime_ps);
-      histos.fill(HIST("event/colltimereso"), tofmult, collision.collisionTimeRes() * 1000.f);
+      histos.fill(HIST("event/colltime"), evtime);
+      histos.fill(HIST("event/colltimereso"), tofmult, evtimereso);
     }
     return true;
   }
@@ -287,7 +290,7 @@ struct tofPidQa {
 
   using CollisionCandidate = soa::Join<aod::Collisions, aod::EvSels>::iterator;
   void process(CollisionCandidate const& collision,
-               soa::Join<aod::Tracks, aod::TracksExtra, aod::TOFSignal, aod::TrackSelection> const& tracks)
+               soa::Join<aod::Tracks, aod::TracksExtra, aod::TOFSignal, aod::TOFEvTime, aod::pidEvTimeFlags, aod::TrackSelection> const& tracks)
   {
     isEventSelected<true>(collision, tracks);
     for (auto t : tracks) {
