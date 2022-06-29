@@ -172,7 +172,6 @@ class PidParameters : public TNamed
       LOG(fatal) << "Could not get parameters " << ParamName << " from file";
       f.ls();
     }
-    p->Print();
     f.Close();
     SetParameters(p);
     Print();

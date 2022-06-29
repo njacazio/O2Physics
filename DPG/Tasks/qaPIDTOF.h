@@ -186,7 +186,8 @@ struct tofPidQa {
     histos.add("event/evtime/ft0", "FT0 event time", kTH1F, {colTimeAxis});
     histos.add("event/evtime/ft0reso", "FT0 event time reso.", kTH2F, {multAxis, colTimeResoAxis});
 
-    histos.add("event/tofsignal", "", kTH2F, {pAxis, tofAxis});
+    histos.add("event/tofsignal", "TOF signal", kTH2F, {pAxis, tofAxis});
+    histos.add("event/tofsignalunassigned", "TOF signal (unassigned tracks)", kTH2F, {pAxis, tofAxis});
     histos.add("event/pexp", "", kTH2F, {pAxis, pExpAxis});
     histos.add("event/eta", "", kTH1F, {etaAxis});
     histos.add("event/phi", "", kTH1F, {phiAxis});
@@ -327,7 +328,11 @@ struct tofPidQa {
     if constexpr (fillHistograms) {
       histos.fill(HIST("event/trackselection"), 5.f);
       histos.fill(HIST("event/particlehypo"), track.pidForTracking());
-      histos.fill(HIST("event/tofsignal"), track.p(), track.tofSignal());
+      if (track.has_collision()) {
+        histos.fill(HIST("event/tofsignal"), track.p(), track.tofSignal());
+      } else {
+        histos.fill(HIST("event/tofsignalunassigned"), track.p(), track.tofSignal());
+      }
       histos.fill(HIST("event/pexp"), track.p(), track.tofExpMom());
       histos.fill(HIST("event/eta"), track.eta());
       histos.fill(HIST("event/phi"), track.phi());
