@@ -168,6 +168,11 @@ class PidParameters : public TNamed
     LOG(info) << "Loading parameters " << ParamName << " from TFile " << FileName;
     PidParameters<nPar>* p;
     f.GetObject(ParamName, p);
+    if (!p) {
+      LOG(fatal) << "Could not get parameters " << ParamName << " from file";
+      f.ls();
+    }
+    p->Print();
     f.Close();
     SetParameters(p);
     Print();
@@ -176,6 +181,10 @@ class PidParameters : public TNamed
   /// Getter for the parameters
   /// \return returns an array of parameters
   const pidvar_t* GetParameters() const { return mPar.to_array(); }
+
+  /// Getter for the parameters
+  /// \return returns an array of parameters
+  const pidvar_t GetParameter(int i) const { return mPar[i]; }
 
   /// Getter for the size of the parameter
   /// \return returns the size of the parameter array
