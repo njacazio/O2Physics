@@ -330,7 +330,6 @@ struct tofEventTime {
     tableEvTime.reserve(tracks.size());
     tableFlags.reserve(tracks.size());
 
-    int lastCollisionId = -1;      // Last collision ID analysed
     for (auto const& t : tracks) { // Loop on collisions
       if (!t.has_collision()) {    // Track was not assigned, cannot compute event time
         tableFlags(0);
