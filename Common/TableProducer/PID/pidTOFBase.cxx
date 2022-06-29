@@ -124,6 +124,10 @@ struct tofEventTime {
       LOGF(info, "Enabling process function: processFT0");
       nEnabled++;
     }
+    if (doprocessOnlyFT0 == true) {
+      LOGF(info, "Enabling process function: processOnlyFT0");
+      nEnabled++;
+    }
     if (nEnabled > 1) {
       LOGF(fatal, "Cannot enable more process functions at the same time. Please choose one.");
     }
@@ -234,7 +238,7 @@ struct tofEventTime {
   PROCESS_SWITCH(tofEventTime, processNoFT0, "Process without FT0", true);
 
   ///
-  /// Process function to prepare the event for each track on Run 3 data without the FT0
+  /// Process function to prepare the event for each track on Run 3 data with the FT0
   using EvTimeCollisions = soa::Join<aod::Collisions, aod::EvSels, aod::FT0sCorrected>;
   void processFT0(TrksEvTime& tracks,
                   aod::FT0s const&,
@@ -312,6 +316,42 @@ struct tofEventTime {
     }
   }
   PROCESS_SWITCH(tofEventTime, processFT0, "Process with FT0", false);
+
+  ///
+  /// Process function to prepare the event for each track on Run 3 data with only the FT0
+  void processOnlyFT0(TrksEvTime& tracks,
+                      aod::FT0s const&,
+                      EvTimeCollisions const&)
+  {
+    if (!enableTable) {
+      return;
+    }
+
+    tableEvTime.reserve(tracks.size());
+    tableFlags.reserve(tracks.size());
+
+    int lastCollisionId = -1;      // Last collision ID analysed
+    for (auto const& t : tracks) { // Loop on collisions
+      if (!t.has_collision()) {    // Track was not assigned, cannot compute event time
+        tableFlags(0);
+        tableEvTime(0.f, 999.f, -1);
+        continue;
+      }
+      const auto& collision = t.collision_as<EvTimeCollisions>();
+
+      if (collision.has_foundFT0()) { // T0 measurement is available
+        // const auto& ft0 = collision.foundFT0();
+        if (collision.t0ACValid()) {
+          tableFlags(o2::aod::pidflags::enums::PIDFlags::EvTimeT0AC);
+          tableEvTime(collision.t0AC(), collision.t0resolution(), 1);
+          continue;
+        }
+      }
+      tableFlags(0);
+      tableEvTime(0.f, 999.f, -1);
+    }
+  }
+  PROCESS_SWITCH(tofEventTime, processOnlyFT0, "Process only with FT0", false);
 };
 
 /// Task that checks the TOF collision time
