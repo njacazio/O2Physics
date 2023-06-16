@@ -21,6 +21,9 @@
 
 #include <experimental/type_traits>
 
+// ROOT includes
+#include "TMath.h"
+
 // O2 includes
 #include "Framework/ASoA.h"
 #include "Framework/AnalysisDataModel.h"
@@ -407,8 +410,18 @@ DECLARE_SOA_COLUMN(TOFSignal, tofSignal, float); //! TOF signal from track time
 
 namespace pidtofbeta
 {
-DECLARE_SOA_COLUMN(Beta, beta, float);           //! TOF beta
-DECLARE_SOA_COLUMN(BetaError, betaerror, float); //! Uncertainty on the TOF beta
+static constexpr float kCSPEED = TMath::C() * 1.0e2f * 1.0e-12f; /// Speed of light in TOF units (cm/ps)
+static constexpr float kCSPEDDInv = 1.f / kCSPEED;               /// Inverse of the Speed of light in TOF units (ps/cm)
+static constexpr float defaultReturnValue = -999.f;              /// Default return value in case TOF measurement is not available
+
+DECLARE_SOA_COLUMN(Beta, beta, float);            //! TOF beta
+DECLARE_SOA_COLUMN(BetaError, betaerror, float);  //! Uncertainty on the TOF beta
+DECLARE_SOA_DYNAMIC_COLUMN(BetaOnTheFly, betaOtf, //! TOF beta of the track (on the fly)
+                           [](uint8_t detectorMap, float length, float tofSignal, float collisionTime) -> float {
+                            if(!(detectorMap & o2::aod::track::TOF)){
+                              return defaultReturnValue;
+                            }
+                            return length / (tofSignal - collisionTime) * kCSPEDDInv; });
 //
 DECLARE_SOA_COLUMN(ExpBetaEl, expbetael, float);           //! Expected beta of electron
 DECLARE_SOA_COLUMN(ExpBetaElError, expbetaelerror, float); //! Expected uncertainty on the beta of electron
@@ -530,7 +543,8 @@ DECLARE_SOA_TABLE(TOFSignal, "AOD", "TOFSignal", //! Table of the TOF signal
                   pidtofsignal::TOFSignal);
 
 DECLARE_SOA_TABLE(pidTOFbeta, "AOD", "pidTOFbeta", //! Table of the TOF beta
-                  pidtofbeta::Beta, pidtofbeta::BetaError);
+                  pidtofbeta::Beta, pidtofbeta::BetaError,
+                  pidtofbeta::BetaOnTheFly<>);
 
 DECLARE_SOA_TABLE(pidTOFmass, "AOD", "pidTOFmass", //! Table of the TOF mass
                   pidtofmass::TOFMass);
