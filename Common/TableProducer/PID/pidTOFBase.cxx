@@ -198,7 +198,7 @@ struct tofEventTime {
   Configurable<bool> requireITS{"requireITS", false, "Requires ITS to select track sample for TOF event time"};
   Configurable<float> trackSampleMaxITSChi2{"trackSampleMaxITSChi2", 10000.f, "Maximum ITS Chi2 to select track sample for TOF event time"};
   Configurable<bool> requireTPC{"requireTPC", false, "Requires ITS to select track sample for TOF event time"};
-  Configurable<int16_t> trackSampleMinCrossedRows{"trackSampleMinCrossedRows", -1.f, "Minimum number of TPC crossed rows to select track sample for TOF event time"};
+  Configurable<int16_t> trackSampleMinCrossedRows{"trackSampleMinCrossedRows", -1, "Minimum number of TPC crossed rows to select track sample for TOF event time"};
   Configurable<float> trackSampleMaxTPCChi2{"trackSampleMaxTPCChi2", 10000.f, "Maximum TPC Chi2 to select track sample for TOF event time"};
   // Event time configurations
   Configurable<float> maxEvTimeTOF{"maxEvTimeTOF", 100000.0f, "Maximum value of the TOF event time"};
