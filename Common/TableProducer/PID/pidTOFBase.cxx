@@ -216,6 +216,8 @@ struct tofEventTime {
   Configurable<bool> enableTimeMonitoring{"enableTimeMonitoring", true, "Flag to enable the time monitoring"};
   TGraph mGraphPrepTimeMonitoring;
   TGraph mGraphTimeMonitoring;
+  TGraph mGraphTimeMonitoringTrk;
+  TGraph mGraphTimeMonitoringEvTime;
 
   void init(o2::framework::InitContext& initContext)
   {
@@ -334,8 +336,18 @@ struct tofEventTime {
     mGraphTimeMonitoring.GetXaxis()->SetTitle("Number of tracks");
     mGraphTimeMonitoring.GetYaxis()->SetTitle("Time [us]");
 
-    mGraphPrepTimeMonitoring.SetName("timeMonitoring");
-    mGraphPrepTimeMonitoring.SetTitle("Time monitoring");
+    mGraphTimeMonitoringTrk.SetName("timeMonitoringTrk");
+    mGraphTimeMonitoringTrk.SetTitle("Time monitoring Trk");
+    mGraphTimeMonitoringTrk.GetXaxis()->SetTitle("Number of tracks");
+    mGraphTimeMonitoringTrk.GetYaxis()->SetTitle("Time [us]");
+
+    mGraphTimeMonitoringEvTime.SetName("timeMonitoringEvTime");
+    mGraphTimeMonitoringEvTime.SetTitle("Time monitoring Ev. Time");
+    mGraphTimeMonitoringEvTime.GetXaxis()->SetTitle("Number of tracks");
+    mGraphTimeMonitoringEvTime.GetYaxis()->SetTitle("Time [us]");
+
+    mGraphPrepTimeMonitoring.SetName("timeMonitoringPrep");
+    mGraphPrepTimeMonitoring.SetTitle("Time monitoring Prep.");
     mGraphPrepTimeMonitoring.GetXaxis()->SetTitle("Number of tracks");
     mGraphPrepTimeMonitoring.GetYaxis()->SetTitle("Time [us]");
   }
@@ -407,13 +419,22 @@ struct tofEventTime {
       if (enableTimeMonitoring) {
         mGraphPrepTimeMonitoring.AddPoint(tracksInCollision.size(), std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count());
       }
+      int nGoodTracksForTOF2 = 0;
+      for (auto const& trk2 : tracksInCollision) {
+        if (tofEvTimeSelectionCriteria::filterForTOFEventTime(trk2)) {
+          nGoodTracksForTOF2++;
+        }
+      }
 
       // First make table for event time
       start = std::chrono::high_resolution_clock::now();
       const auto evTimeTOF = evTimeMakerForTracks<TrksEvTime::iterator, tofEvTimeSelectionCriteria::filterForTOFEventTime, o2::pid::tof::ExpTimes>(tracksInCollision, mRespParamsV2, diamond);
       stop = std::chrono::high_resolution_clock::now();
+      LOG(info) << std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
       if (enableTimeMonitoring) {
         mGraphTimeMonitoring.AddPoint(tracksInCollision.size(), std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count());
+        mGraphTimeMonitoringTrk.AddPoint(tracksInCollision.size(), nGoodTracksForTOF2);
+        mGraphTimeMonitoringEvTime.AddPoint(evTimeTOF.mEventTimeMultiplicity, std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count());
       }
       int nGoodTracksForTOF = 0;
       float et = evTimeTOF.mEventTime;
@@ -440,6 +461,8 @@ struct tofEventTime {
     if (enableTimeMonitoring) {
       mGraphPrepTimeMonitoring.SaveAs("/tmp/timeMonitoringPrep.root");
       mGraphTimeMonitoring.SaveAs("/tmp/timeMonitoring.root");
+      mGraphTimeMonitoringTrk.SaveAs("/tmp/timeMonitoringTrk.root");
+      mGraphTimeMonitoringEvTime.SaveAs("/tmp/timeMonitoringEvTime.root");
     }
   }
   PROCESS_SWITCH(tofEventTime, processNoFT0, "Process without FT0", true);
