@@ -201,6 +201,24 @@ class TOFResoParamsV2 : public o2::tof::Parameters<13>
     printMomentumChargeShiftParameters();
   }
 
+  // Time shift for post calibration
+  void setTimeShiftParameters(std::unordered_map<std::string, float> const& pars, bool positive)
+  {
+    std::string baseOpt = positive ? "TimeShift.Pos." : "TimeShift.Neg.";
+
+    if (pars.count(baseOpt + "GetN") == 0) { // If the map does not contain the number of eta bins, we assume that no correction has to be applied
+      return;
+    }
+    const int nPoints = static_cast<int>(pars.at(baseOpt + "GetN"));
+    if (nPoints <= 0) {
+      LOG(fatal) << "TOFResoParamsV2 shift: time must be positive";
+    }
+    TGraph graph;
+    for (int i = 0; i < nPoints; ++i) {
+      graph.AddPoint(pars.at(Form("TimeShift.eta%i", i)), pars.at(Form("TimeShift.cor%i", i)));
+    }
+    setTimeShiftParameters(&graph, positive);
+  }
   void setTimeShiftParameters(std::string const& filename, std::string const& objname, bool positive)
   {
     TFile f(filename.c_str(), "READ");
@@ -285,10 +303,10 @@ class ExpTimes
       return defaultReturnValue;
     }
     if (track.trackType() == o2::aod::track::Run2Track) {
-      return ComputeExpectedTime(track.tofExpMom() * kCSPEDDInv / (1.f + track.sign() * parameters.getShift(track.eta())), track.length());
+      return ComputeExpectedTime(track.tofExpMom() * kCSPEDDInv / (1.f + track.sign() * parameters.getMomentumChargeShift(track.eta())), track.length());
     }
-    LOG(debug) << "TOF exp. mom. " << track.tofExpMom() << " shifted = " << track.tofExpMom() / (1.f + track.sign() * parameters.getShift(track.eta()));
-    return ComputeExpectedTime(track.tofExpMom() / (1.f + track.sign() * parameters.getShift(track.eta())), track.length()) + parameters.getTimeShift(track.eta(), track.sign());
+    LOG(debug) << "TOF exp. mom. " << track.tofExpMom() << " shifted = " << track.tofExpMom() / (1.f + track.sign() * parameters.getMomentumChargeShift(track.eta()));
+    return ComputeExpectedTime(track.tofExpMom() / (1.f + track.sign() * parameters.getMomentumChargeShift(track.eta())), track.length()) + parameters.getTimeShift(track.eta(), track.sign());
   }
 
   /// Gets the expected resolution of the t-texp-t0

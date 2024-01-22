@@ -10,10 +10,10 @@
 # or submit itself to any jurisdiction.
 
 add_subdirectory(PID)
-add_subdirectory(V0Cascades)
 
-o2physics_add_dpl_workflow(qa-trackselection
-    SOURCES qaTrackSelection.cxx
+# add_subdirectory(V0Cascades)
+o2physics_add_dpl_workflow(qa-tracksplitting
+    SOURCES qaTrackSplitting.cxx
     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
     COMPONENT_NAME Analysis)
 

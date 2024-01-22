@@ -10,8 +10,8 @@
 # or submit itself to any jurisdiction.
 
 
-add_subdirectory(Core)
+#add_subdirectory(Core)
 # add_subdirectory(DataModel)
 add_subdirectory(Tasks)
-add_subdirectory(TableProducer)
-add_subdirectory(Tools)
+#add_subdirectory(TableProducer)
+#add_subdirectory(Tools)

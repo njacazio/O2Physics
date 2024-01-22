@@ -10,9 +10,10 @@
 # or submit itself to any jurisdiction.
 
 # Common
-add_subdirectory(QC)
+# add_subdirectory(QC)
 
 # PAGs
 add_subdirectory(Nuspex)
-add_subdirectory(Resonances)
-add_subdirectory(Strangeness)
+
+# add_subdirectory(Resonances)
+# add_subdirectory(Strangeness)

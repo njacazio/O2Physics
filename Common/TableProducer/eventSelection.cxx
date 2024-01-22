@@ -748,7 +748,7 @@ struct EventSelectionTask {
       }
       std::vector<int> vAssocToThisCol = vCollsInTimeWin[colIndex];
       int nITS567tracksInTimeWindow = 0;
-      for (int iCol = 0; iCol < vAssocToThisCol.size(); iCol++) {
+      for (u_int64_t iCol = 0; iCol < vAssocToThisCol.size(); iCol++) {
         int thisColIndex = vAssocToThisCol[iCol];
         nITS567tracksInTimeWindow += vTracksITS567perColl[thisColIndex];
       }

@@ -9,8 +9,8 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
-# add_subdirectory(Core)
-# add_subdirectory(DataModel)
-add_subdirectory(Tasks)
-# add_subdirectory(TableProducer)
-# add_subdirectory(Utils)
+# HMPID
+o2physics_add_dpl_workflow(pid-hmpid-qa
+    SOURCES qaHMPID.cxx
+    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+    COMPONENT_NAME Analysis)

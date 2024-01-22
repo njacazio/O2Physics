@@ -403,7 +403,10 @@ DECLARE_SOA_DYNAMIC_COLUMN(IsEvTimeTOFT0AC, isEvTimeTOFT0AC, //! True if the Eve
 
 namespace pidtofsignal
 {
-DECLARE_SOA_COLUMN(TOFSignal, tofSignal, float); //! TOF signal from track time
+DECLARE_SOA_COLUMN(TOFSignal, tofSignal, float);                   //! TOF signal from track time
+DECLARE_SOA_DYNAMIC_COLUMN(EventCollisionTime, eventCollisionTime, //! Event collision time used for the track. Needs the TOF
+                           [](float signal, float tMinusTexp, float texp) -> float { return texp + tMinusTexp - signal; });
+
 } // namespace pidtofsignal
 
 namespace pidtofbeta

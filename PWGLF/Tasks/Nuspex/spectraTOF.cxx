@@ -34,6 +34,7 @@
 #include "PWGLF/DataModel/LFParticleIdentification.h"
 #include "PWGLF/DataModel/spectraTOF.h"
 #include "Framework/O2DatabasePDGPlugin.h"
+#include "PWGLF/Utils/inelGt.h"
 
 #include "TPDGCode.h"
 
@@ -343,6 +344,46 @@ struct tofSpectra {
       hh->GetXaxis()->SetBinLabel(5, "hasParticleInFT0C && hasParticleInFT0A");
     }
 
+    AxisSpec multAxis{binsMultiplicity, "Undefined multiplicity estimator"};
+    switch (multiplicityEstimator) {
+      case MultCodes::kNoMultiplicity: // No multiplicity
+        break;
+      case MultCodes::kMultFV0M: // MultFV0M
+        multAxis.name = "MultFV0M";
+        break;
+      case MultCodes::kMultFT0M: // MultFT0M
+        multAxis.name = "MultFT0M";
+        break;
+      case MultCodes::kMultFDDM: // MultFDDM
+        multAxis.name = "MultFDDM";
+        break;
+      case MultCodes::kMultTracklets: // MultTracklets
+        multAxis.name = "MultTracklets";
+        break;
+      case MultCodes::kMultTPC: // MultTPC
+        multAxis.name = "MultTPC";
+        break;
+      case MultCodes::kMultNTracksPV: // MultNTracksPV
+        multAxis.name = "MultNTracksPV";
+        break;
+      case MultCodes::kMultNTracksPVeta1: // MultNTracksPVeta1
+        multAxis.name = "MultNTracksPVeta1";
+        break;
+      case MultCodes::kCentralityFT0C: // Centrality FT0C
+        multAxis = {binsPercentile, "Centrality FT0C"};
+        break;
+      case MultCodes::kCentralityFT0M: // Centrality FT0M
+        multAxis = {binsPercentile, "Centrality FT0M"};
+        break;
+      case MultCodes::kCentralityFV0A: // Centrality FV0A
+        multAxis = {binsPercentile, "Centrality FV0A"};
+        break;
+      default:
+        LOG(fatal) << "Unrecognized option for multiplicity " << multiplicityEstimator;
+    }
+
+    hMultiplicityvsPercentile = histos.add<TH2>("Mult/vsPercentile", "Multiplicity vs percentile", HistType::kTH2D, {{150, 0, 150}, {100, 0, 100, "Track multiplicity"}});
+
     for (int i = 0; i < NpCharge; i++) {
       switch (i) {
         case 0:
@@ -405,44 +446,6 @@ struct tofSpectra {
       const AxisSpec nsigmaTOFAxis{binsnsigmaTOF, Form("N_{#sigma}^{TOF}(%s)", pTCharge[i])};
       const AxisSpec deltaTPCAxis{binsdeltaTPC, Form("#Delta^{TPC}(%s)", pTCharge[i])};
       const AxisSpec deltaTOFAxis{binsdeltaTOF, Form("#Delta^{TOF}(%s)", pTCharge[i])};
-      AxisSpec multAxis{binsMultiplicity, "Undefined multiplicity estimator"};
-
-      switch (multiplicityEstimator) {
-        case MultCodes::kNoMultiplicity: // No multiplicity
-          break;
-        case MultCodes::kMultFV0M: // MultFV0M
-          multAxis.name = "MultFV0M";
-          break;
-        case MultCodes::kMultFT0M: // MultFT0M
-          multAxis.name = "MultFT0M";
-          break;
-        case MultCodes::kMultFDDM: // MultFDDM
-          multAxis.name = "MultFDDM";
-          break;
-        case MultCodes::kMultTracklets: // MultTracklets
-          multAxis.name = "MultTracklets";
-          break;
-        case MultCodes::kMultTPC: // MultTPC
-          multAxis.name = "MultTPC";
-          break;
-        case MultCodes::kMultNTracksPV: // MultNTracksPV
-          multAxis.name = "MultNTracksPV";
-          break;
-        case MultCodes::kMultNTracksPVeta1: // MultNTracksPVeta1
-          multAxis.name = "MultNTracksPVeta1";
-          break;
-        case MultCodes::kCentralityFT0C: // Centrality FT0C
-          multAxis = {binsPercentile, "Centrality FT0C"};
-          break;
-        case MultCodes::kCentralityFT0M: // Centrality FT0M
-          multAxis = {binsPercentile, "Centrality FT0M"};
-          break;
-        case MultCodes::kCentralityFV0A: // Centrality FV0A
-          multAxis = {binsPercentile, "Centrality FV0A"};
-          break;
-        default:
-          LOG(fatal) << "Unrecognized option for multiplicity " << multiplicityEstimator;
-      }
       if (multiplicityEstimator == MultCodes::kNoMultiplicity) {
         histos.add(hnsigmatof[i].data(), pTCharge[i], kTH2D, {ptAxis, nsigmaTOFAxis});
         histos.add(hnsigmatpc[i].data(), pTCharge[i], kTH2D, {ptAxis, nsigmaTPCAxis});
@@ -596,7 +599,7 @@ struct tofSpectra {
         histos.fill(HIST(hnsigmatpc[id]), track.pt(), nsigmaTPC, multiplicity, track.dcaXY(), track.dcaZ(), track.eta());      // RD
       } else {                                                                                                                 // RD
         histos.fill(HIST(hnsigmatpc[id + Np]), track.pt(), nsigmaTPC, multiplicity, track.dcaXY(), track.dcaZ(), track.eta()); // RD
-      }                                                                                                                        // RD
+      } // RD
     } else {
       if (track.sign() > 0) {
         histos.fill(HIST(hnsigmatpc[id]), track.pt(), nsigmaTPC, multiplicity);
@@ -717,7 +720,7 @@ struct tofSpectra {
           histos.fill(HIST(hnsigmatof[id]), track.pt(), nsigmaTOF, multiplicity, track.dcaXY(), track.dcaZ(), track.eta());      // RD
         } else {                                                                                                                 // RD
           histos.fill(HIST(hnsigmatof[id + Np]), track.pt(), nsigmaTOF, multiplicity, track.dcaXY(), track.dcaZ(), track.eta()); // RD
-        }                                                                                                                        // RD
+        } // RD
       } else {
         if (track.sign() > 0) {
           histos.fill(HIST(hnsigmatof[id]), track.pt(), nsigmaTOF, multiplicity);
@@ -1159,12 +1162,15 @@ struct tofSpectra {
   using TrackCandidates = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksDCA,
                                     aod::pidEvTimeFlags, aod::TrackSelection, aod::TOFSignal>;
 
+  int n = 0;
   void processStandard(CollisionCandidate::iterator const& collision,
                        TrackCandidates const& tracks)
   {
     if (!isEventSelected<true, true>(collision)) {
       return;
     }
+    // hMultiplicityvsPercentile->Fill(getMultiplicity(collision), tracks.size());
+    hMultiplicityvsPercentile->Fill(getMultiplicity(collision), collision.multNTracksPV());
     for (const auto& track : tracks) {
       if (!isTrackSelected<true>(track)) {
         continue;
@@ -1276,7 +1282,7 @@ struct tofSpectra {
         return collision.centFT0C();
         break;
       case MultCodes::kCentralityFT0M: // Centrality FT0M
-        return collision.centFT0M();   // collision.centFT0A()
+        return collision.centFT0A();   // collision.centFT0A()
         break;
       default:
         LOG(fatal) << "Unknown multiplicity estimator: " << multiplicityEstimator;
@@ -1284,7 +1290,7 @@ struct tofSpectra {
     }
   }
 
-  using CollisionCandidateMC = soa::Join<aod::Collisions, aod::McCollisionLabels, aod::EvSels, aod::CentFT0Cs, aod::TPCMults, aod::PVMults, aod::MultZeqs, aod::CentFT0Ms>; // RD
+  using CollisionCandidateMC = soa::Join<aod::Collisions, aod::McCollisionLabels, aod::EvSels, aod::CentFT0As, aod::CentFT0Cs, aod::TPCMults, aod::PVMults, aod::MultZeqs, aod::CentFT0Ms>; // RD
   template <std::size_t i, typename TrackType, typename ParticleType>
   void fillTrackHistograms_MC(TrackType const& track, ParticleType const& mcParticle, CollisionCandidateMC::iterator const& collision)
   {
@@ -1472,7 +1478,7 @@ struct tofSpectra {
   }
 
   template <std::size_t i, typename ParticleType>
-  void fillParticleHistograms_MC(CollisionCandidateMC::iterator const& collision, ParticleType const& mcParticle)
+  void fillParticleHistograms_MC(const float multiplicity, ParticleType const& mcParticle)
   {
 
     switch (i) {
@@ -1536,7 +1542,6 @@ struct tofSpectra {
       return;
     }
 
-    const float multiplicity = getMultiplicity(collision);
     if (!mcParticle.isPhysicalPrimary()) {
       if (mcParticle.getProcess() == 4) {
         if (includeCentralityMC) {
@@ -1747,32 +1752,28 @@ struct tofSpectra {
 
   Service<o2::framework::O2DatabasePDG> pdgDB;
 
-  // Event selection
   template <typename TMcParticles>
-  bool isTrueINELgt0(TMcParticles particles)
+  uint16_t GetGenNchInFT0Mregion(TMcParticles particles)
   {
-    int nPart = 0;
-    for (const auto& particle : particles) {
-      if (particle.isPhysicalPrimary() == 0)
-        continue; // consider only primaries
-
-      const auto& pdgInfo = pdgDB->GetParticle(particle.pdgCode());
+    // Particle counting in FITFT0: -3.3<η<-2.1; 3.5<η<4.9
+    uint16_t nchFT0 = 0;
+    for (auto& mcParticle : particles) {
+      if (!mcParticle.isPhysicalPrimary()) {
+        continue;
+      }
+      const auto& pdgInfo = pdgDB->GetParticle(mcParticle.pdgCode());
       if (!pdgInfo) {
         continue;
       }
-      if (TMath::Abs(pdgInfo->Charge()) < 0.001) {
-        continue; // consider only charged particles
+      if (pdgInfo->Charge() == 0) {
+        continue;
       }
-
-      if (particle.eta() < -1.0 || particle.eta() > 1.0)
-        continue; // consider only particles in |eta| < 1
-
-      nPart++;
+      if (mcParticle.eta() < -3.3 || mcParticle.eta() > 4.9 || (mcParticle.eta() > -2.1 && mcParticle.eta() < 3.5)) {
+        continue; // select on T0M Nch region
+      }
+      nchFT0++; // increment
     }
-    if (nPart > 0)
-      return true;
-    else
-      return false;
+    return nchFT0;
   }
 
   Preslice<aod::McParticles> perMCCol = aod::mcparticle::mcCollisionId;
@@ -1824,29 +1825,26 @@ struct tofSpectra {
           continue;
         }
         const auto& particlesInCollision = mcParticles.sliceByCached(aod::mcparticle::mcCollisionId, collision.mcCollision().globalIndex(), cache);
+        const float multiplicity = getMultiplicity(collision);
+
         for (const auto& mcParticle : particlesInCollision) {
 
           if (std::abs(mcParticle.y()) > trkselOptions.cfgCutY) {
             continue;
           }
           static_for<0, 17>([&](auto i) {
-            fillParticleHistograms_MC<i>(collision, mcParticle);
+            fillParticleHistograms_MC<i>(multiplicity, mcParticle);
           });
         }
       }
     } else {
-      for (const auto& collision : collisions) {
-        for (const auto& mcParticle : mcParticles) {
-          // if (std::abs(mcParticle.eta()) > cfgCutEta) {
-          //   continue;
-          // }
-          if (std::abs(mcParticle.y()) > trkselOptions.cfgCutY) {
-            continue;
-          }
-          static_for<0, 17>([&](auto i) {
-            fillParticleHistograms_MC<i>(collision, mcParticle);
-          });
+      for (const auto& mcParticle : mcParticles) {
+        if (std::abs(mcParticle.y()) > trkselOptions.cfgCutY) {
+          continue;
         }
+        static_for<0, 17>([&](auto i) {
+          fillParticleHistograms_MC<i>(50., mcParticle);
+        });
       }
     }
     // Loop on reconstructed collisions
@@ -1871,25 +1869,19 @@ struct tofSpectra {
       bool hasParticleInFT0C = false;
       bool hasParticleInFT0A = false;
       if (evselOptions.cfgINELCut.value == 1) {
-        if (!isTrueINELgt0(particlesInCollision)) {
+        if (!o2::pwglf::isINELgt0mc(particlesInCollision, pdgDB)) {
+          continue;
+        }
+      }
+      if (evselOptions.cfgINELCut.value == 0) {
+        if (!o2::pwglf::isINELgt1mc(particlesInCollision, pdgDB)) {
           continue;
         }
       }
 
-      int nInelPart = 0;
-      for (const auto& mcParticle : particlesInCollision) {
-        if (mcParticle.isPhysicalPrimary()) {
-          if (mcParticle.eta() >= -3.4f && mcParticle.eta() <= -2.3f) { // Acceptance of the FT0C
-            hasParticleInFT0C = true;
-          }
-          if (mcParticle.eta() >= 3.8f && mcParticle.eta() <= 5.0f) { // Acceptance of the FT0A
-            hasParticleInFT0A = true;
-          }
-          if (std::abs(mcParticle.eta()) < 1.f) {
-            nInelPart++;
-          }
-        }
+      const auto nInelPart = GetGenNchInFT0Mregion(particlesInCollision);
 
+      for (const auto& mcParticle : particlesInCollision) {
         if (std::abs(mcParticle.y()) > trkselOptions.cfgCutY) {
           continue;
         }

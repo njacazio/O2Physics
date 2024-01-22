@@ -76,8 +76,8 @@ struct TimestampTask {
         LOGF(fatal, "Cannot find end-of-run timestamp for run number in path '%s'.", run_path.data());
       }
 
-      int64_t sorTimestamp = atol(headers["SOR"].c_str()); // timestamp of the SOR in ms
-      int64_t eorTimestamp = atol(headers["EOR"].c_str()); // timestamp of the EOR in ms
+      const int64_t sorTimestamp = atol(headers["SOR"].c_str()); // timestamp of the SOR in ms
+      const int64_t eorTimestamp = atol(headers["EOR"].c_str()); // timestamp of the EOR in ms
 
       bool isUnanchoredRun3MC = runNumber >= 300000 && runNumber < 500000;
       if (isRun2MC || isUnanchoredRun3MC) {

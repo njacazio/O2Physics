@@ -98,8 +98,8 @@ struct tofPidBeta {
             LOGF(warning, "Pass '%s' not available in the retrieved CCDB object", passName.value.data());
           }
         } else {
-          mRespParamsV2.setShiftParameters(paramCollection.getPars(passName.value));
-          mRespParamsV2.printShiftParameters();
+          mRespParamsV2.setMomentumChargeShiftParameters(paramCollection.getPars(passName.value));
+          mRespParamsV2.printMomentumChargeShiftParameters();
         }
       } else {
         mRespParamsV2.loadParamFromFile(fname.data(), parametrizationPath.value);
@@ -116,8 +116,8 @@ struct tofPidBeta {
           LOGF(warning, "Pass '%s' not available in the retrieved CCDB object", passName.value.data());
         }
       } else {
-        mRespParamsV2.setShiftParameters(paramCollection->getPars(passName.value));
-        mRespParamsV2.printShiftParameters();
+        mRespParamsV2.setMomentumChargeShiftParameters(paramCollection->getPars(passName.value));
+        mRespParamsV2.printMomentumChargeShiftParameters();
       }
     }
     mRespParamsV2.print();
@@ -142,7 +142,7 @@ struct tofPidBeta {
       }
       if (enableTableMass) {
         if (enableTOFParams) {
-          tablePIDTOFMass(o2::pid::tof::TOFMass<Trks::iterator>::GetTOFMass(trk.tofExpMom() / (1.f + trk.sign() * mRespParamsV2.getShift(trk.eta())), beta));
+          tablePIDTOFMass(o2::pid::tof::TOFMass<Trks::iterator>::GetTOFMass(trk.tofExpMom() / (1.f + trk.sign() * mRespParamsV2.getMomentumChargeShift(trk.eta())), beta));
         } else {
           tablePIDTOFMass(o2::pid::tof::TOFMass<Trks::iterator>::GetTOFMass(trk, beta));
         }

@@ -9,42 +9,42 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
-o2physics_add_dpl_workflow(alice3-qa-multiplicity
-                    SOURCES alice3-qa-multiplicity.cxx
-                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
-                    COMPONENT_NAME Analysis)
+# o2physics_add_dpl_workflow(alice3-qa-multiplicity
+#                     SOURCES alice3-qa-multiplicity.cxx
+#                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
+#                     COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(alice3-qa-singleparticle
                     SOURCES alice3-qa-singleparticle.cxx
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2::FrameworkPhysicsSupport
                     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(alice3-lutmaker
-                    SOURCES alice3-lutmaker.cxx
-                    PUBLIC_LINK_LIBRARIES O2::Framework FairRoot::Base O2Physics::AnalysisCore
-                    COMPONENT_NAME Analysis)
+# o2physics_add_dpl_workflow(alice3-lutmaker
+#                     SOURCES alice3-lutmaker.cxx
+#                     PUBLIC_LINK_LIBRARIES O2::Framework FairRoot::Base O2Physics::AnalysisCore
+#                     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(alice3-pid-rich-qa
-                    SOURCES pidRICHqa.cxx
-                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
-                    COMPONENT_NAME Analysis)
+# o2physics_add_dpl_workflow(alice3-pid-rich-qa
+#                     SOURCES pidRICHqa.cxx
+#                     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+#                     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(alice3-ecal-qa
-                    SOURCES ECALqa.cxx
-                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
-                    COMPONENT_NAME Analysis)
+# o2physics_add_dpl_workflow(alice3-ecal-qa
+#                     SOURCES ECALqa.cxx
+#                     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+#                     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(alice3-pid-ftof-qa
-                    SOURCES pidFTOFqa.cxx
-                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
-                    COMPONENT_NAME Analysis)
+# o2physics_add_dpl_workflow(alice3-pid-ftof-qa
+#                     SOURCES pidFTOFqa.cxx
+#                     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+#                     COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(alice3-cdeuteron
                     SOURCES alice3-cdeuteron.cxx
                     PUBLIC_LINK_LIBRARIES O2::DCAFitter O2Physics::AnalysisCore
                     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(alice3-dilepton
-                    SOURCES alice3-dilepton.cxx
-                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2::FrameworkPhysicsSupport
-                    COMPONENT_NAME Analysis)
+# o2physics_add_dpl_workflow(alice3-dilepton
+#                     SOURCES alice3-dilepton.cxx
+#                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2::FrameworkPhysicsSupport
+#                     COMPONENT_NAME Analysis)

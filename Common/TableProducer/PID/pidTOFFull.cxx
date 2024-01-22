@@ -157,8 +157,8 @@ struct tofPidFull {
             LOGF(warning, "Pass '%s' not available in the retrieved CCDB object", passName.value.data());
           }
         } else {
-          mRespParamsV2.setShiftParameters(paramCollection.getPars(passName.value));
-          mRespParamsV2.printShiftParameters();
+          mRespParamsV2.setMomentumChargeShiftParameters(paramCollection.getPars(passName.value));
+          mRespParamsV2.printMomentumChargeShiftParameters();
         }
       } else {
         mRespParamsV2.loadParamFromFile(fname.data(), parametrizationPath.value);
@@ -174,8 +174,8 @@ struct tofPidFull {
           LOGF(warning, "Pass '%s' not available in the retrieved CCDB object", passName.value.data());
         }
       } else { // Pass is available, load non standard parameters
-        mRespParamsV2.setShiftParameters(paramCollection->getPars(passName.value));
-        mRespParamsV2.printShiftParameters();
+        mRespParamsV2.setMomentumChargeShiftParameters(paramCollection->getPars(passName.value));
+        mRespParamsV2.printMomentumChargeShiftParameters();
       }
     }
     mRespParamsV2.print();

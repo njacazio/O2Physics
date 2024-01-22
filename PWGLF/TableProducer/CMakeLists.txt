@@ -10,11 +10,11 @@
 # or submit itself to any jurisdiction.
 
 add_subdirectory(QC)
-add_subdirectory(converters)
+#add_subdirectory(converters)
 
-add_subdirectory(Nuspex)
+#add_subdirectory(Nuspex)
 add_subdirectory(Strangeness)
-add_subdirectory(Resonances)
+#add_subdirectory(Resonances)
 
 # General purpose
 o2physics_add_dpl_workflow(epvector
