@@ -99,7 +99,7 @@ struct TrackPropagation {
       nEnabledProcesses++;
     }
     if (nEnabledProcesses != 1) {
-      LOG(fatal) << "Exactly one process flag must be set to true. Please choose one.";
+      LOG(fatal) << "Exactly one process flag must be set to true. Found " << nEnabledProcesses << " instead. Please choose one.";
     }
     // Checking if the tables are requested in the workflow and enabling them
     fillTracksDCA = isTableRequiredInWorkflow(initContext, "TracksDCA");

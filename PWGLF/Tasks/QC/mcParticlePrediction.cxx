@@ -355,9 +355,9 @@ struct mcParticlePrediction {
 
       TParticlePDG* p = pdgDB->GetParticle(particle.pdgCode());
       if (p) {
-        if (abs(p->Charge()) > 1e-3) {
+        if (abs(p->Charge()) > 1e-3)
           histos.fill(HIST("particles/eta/charged"), particle.eta());
-        } else {
+        else {
           histos.fill(HIST("particles/eta/neutral"), particle.eta());
         }
       }
@@ -388,6 +388,7 @@ struct mcParticlePrediction {
   void processReco(soa::Join<aod::Collisions, aod::McCollisionLabels, aod::Mults, aod::EvSels, aod::FT0sCorrected>::iterator const& collision,
                    aod::McCollisions const& /*mcCollisions*/,
                    soa::Join<aod::BCs, aod::Run3MatchedToBCSparse> const& /*bcs*/,
+                   //  soa::Join<aod::V0Datas, aod::McV0Labels> const& V0s,
                    aod::McParticles const& mcParticles,
                    TracksMC const& tracks,
                    aod::FT0s const&)
@@ -564,6 +565,55 @@ struct mcParticlePrediction {
       hestimatorsRecoEvRecoVsBCId[i]->Fill(foundBCid, nMult[i]);
       hestimatorsRecoEvVsBCId[i]->Fill(foundBCid, nMultReco[i]);
     }
+#if 0
+    int countV0s = 0;
+    int countV0sAss = 0;
+    int countV0sTOF1Leg = 0;
+    int countV0sTOF2Legs = 0;
+    for (auto& v0 : V0s) { // loop over V0s
+      if (!v0.has_mcParticle()) {
+        continue;
+      }
+      const auto& v0mcparticle = v0.mcParticle();
+
+      if (!v0mcparticle.isPhysicalPrimary()) {
+        continue;
+      }
+
+      if (v0mcparticle.pdgCode() != 310) {
+        continue;
+      }
+
+      countV0s++;
+
+      if (v0.posTrack_as<TracksMC>().hasTOF() || v0.negTrack_as<TracksMC>().hasTOF()) {
+        countV0sTOF1Leg++;
+      }
+
+      if (v0.posTrack_as<TracksMC>().hasTOF() && v0.negTrack_as<TracksMC>().hasTOF()) {
+        countV0sTOF2Legs++;
+      }
+    }
+
+    histos.fill(HIST("V0s/V0RecovsPV"), nMultReco[Estimators::ITS], V0s.size());
+    histos.fill(HIST("V0s/V0RecoAssvsPV"), nMultReco[Estimators::ITS], countV0s);
+    histos.fill(HIST("V0s/V0RecoAssvsPV_TOFOneLeg"), nMultReco[Estimators::ITS], countV0sTOF1Leg);
+    histos.fill(HIST("V0s/V0RecoAssvsPV_TOFTwoLegs"), nMultReco[Estimators::ITS], countV0sTOF2Legs);
+
+    for (auto& mcParticle : particlesInCollision) {
+      if (!mcParticle.isPhysicalPrimary()) {
+        continue;
+      }
+
+      if (mcParticle.pdgCode() != 310) {
+        continue;
+      }
+
+      countV0sAss++;
+    }
+
+    histos.fill(HIST("V0s/V0AssvsPV"), nMultReco[Estimators::ITS], countV0sAss);
+#endif
   }
   PROCESS_SWITCH(mcParticlePrediction, processReco, "Process the reco info", true);
 };

@@ -10,49 +10,46 @@
 # or submit itself to any jurisdiction.
 
 # TOF
-
 o2physics_add_dpl_workflow(pid-tof-base
-                    SOURCES pidTOFBase.cxx
-                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2::TOFBase
-                    COMPONENT_NAME Analysis)
+    SOURCES pidTOFBase.cxx
+    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2::TOFBase
+    COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(pid-tof
-                    SOURCES pidTOF.cxx
-                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2::TOFWorkflowUtils
-                    COMPONENT_NAME Analysis)
+    SOURCES pidTOF.cxx
+    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2::TOFWorkflowUtils
+    COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(pid-tof-merge
-                    SOURCES pidTOFMerge.cxx
-                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2::TOFWorkflowUtils
-                    COMPONENT_NAME Analysis)
+    SOURCES pidTOFMerge.cxx
+    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2::TOFWorkflowUtils
+    COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(pid-tof-beta
-                    SOURCES pidTOFbeta.cxx
-                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2::TOFWorkflowUtils
-                    COMPONENT_NAME Analysis)
+    SOURCES pidTOFbeta.cxx
+    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2::TOFWorkflowUtils
+    COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(pid-tof-full
-                    SOURCES pidTOFFull.cxx
-                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2::TOFWorkflowUtils
-                    COMPONENT_NAME Analysis)
+    SOURCES pidTOFFull.cxx
+    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2::TOFWorkflowUtils
+    COMPONENT_NAME Analysis)
 
 # TPC
-
 o2physics_add_dpl_workflow(pid-tpc-base
-                    SOURCES pidTPCBase.cxx
-                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
-                    COMPONENT_NAME Analysis)
+    SOURCES pidTPCBase.cxx
+    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+    COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(pid-tpc
-                    SOURCES pidTPC.cxx
-                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2Physics::MLCore
-                    COMPONENT_NAME Analysis)
+    SOURCES pidTPC.cxx
+    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2Physics::MLCore
+    COMPONENT_NAME Analysis)
 
 # HMPID
 
 # BAYES
-
 o2physics_add_dpl_workflow(pid-bayes
-                    SOURCES pidBayes.cxx
-                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
-                    COMPONENT_NAME Analysis)
+    SOURCES pidBayes.cxx
+    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+    COMPONENT_NAME Analysis)

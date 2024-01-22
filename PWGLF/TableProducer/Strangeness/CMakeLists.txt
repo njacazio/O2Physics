@@ -21,10 +21,10 @@ o2physics_add_dpl_workflow(cascadefinder
     PUBLIC_LINK_LIBRARIES O2::DCAFitter O2Physics::AnalysisCore
     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(cascadeflow
-    SOURCES cascadeflow.cxx
-    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2Physics::MLCore
-    COMPONENT_NAME Analysis)
+# o2physics_add_dpl_workflow(cascadeflow
+#     SOURCES cascadeflow.cxx
+#     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2Physics::MLCore
+#     COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(cascademcbuilder
     SOURCES cascademcbuilder.cxx
@@ -51,10 +51,10 @@ o2physics_add_dpl_workflow(cascqaanalysis
     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(hstrangecorrelationfilter
-    SOURCES hStrangeCorrelationFilter.cxx
-    PUBLIC_LINK_LIBRARIES O2::DCAFitter O2Physics::AnalysisCore
-    COMPONENT_NAME Analysis)
+# o2physics_add_dpl_workflow(hstrangecorrelationfilter
+#     SOURCES hStrangeCorrelationFilter.cxx
+#     PUBLIC_LINK_LIBRARIES O2::DCAFitter O2Physics::AnalysisCore
+#     COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(lambdakzerobuilder
     SOURCES lambdakzerobuilder.cxx
@@ -86,43 +86,43 @@ o2physics_add_dpl_workflow(lambdakzerospawner
     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(strange-tree-creator
-    SOURCES LFStrangeTreeCreator.cxx
-    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
-    COMPONENT_NAME Analysis)
+# o2physics_add_dpl_workflow(strange-tree-creator
+#     SOURCES LFStrangeTreeCreator.cxx
+#     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
+#     COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(st-coll-ids
     SOURCES stCollIds.cxx
     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(strangederivedbuilder
-    SOURCES strangederivedbuilder.cxx
-    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2::DetectorsBase
-    COMPONENT_NAME Analysis)
+# o2physics_add_dpl_workflow(strangederivedbuilder
+#     SOURCES strangederivedbuilder.cxx
+#     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2::DetectorsBase
+#     COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(v0qaanalysis
     SOURCES v0qaanalysis.cxx
     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
     COMPONENT_NAME Analysis)
 
-# ML selection
-o2physics_add_dpl_workflow(lambdakzeromlselectiontreecreator
-    SOURCES lambdakzeroMLSelectionTreeCreator.cxx
-    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
-    COMPONENT_NAME Analysis)
+# # ML selection
+# o2physics_add_dpl_workflow(lambdakzeromlselectiontreecreator
+#     SOURCES lambdakzeroMLSelectionTreeCreator.cxx
+#     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+#     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(cascademlselectiontreecreator
-    SOURCES cascadeMLSelectionTreeCreator.cxx
-    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
-    COMPONENT_NAME Analysis)
+# o2physics_add_dpl_workflow(cascademlselectiontreecreator
+#     SOURCES cascadeMLSelectionTreeCreator.cxx
+#     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+#     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(lambdakzeromlselection
-    SOURCES lambdakzeromlselection.cxx
-    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2Physics::MLCore
-    COMPONENT_NAME Analysis)
+# o2physics_add_dpl_workflow(lambdakzeromlselection
+#     SOURCES lambdakzeromlselection.cxx
+#     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2Physics::MLCore
+#     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(sigma0builder
-    SOURCES sigma0builder.cxx
-    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2Physics::MLCore
-    COMPONENT_NAME Analysis)
+# o2physics_add_dpl_workflow(sigma0builder
+#     SOURCES sigma0builder.cxx
+#     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2Physics::MLCore
+#     COMPONENT_NAME Analysis)

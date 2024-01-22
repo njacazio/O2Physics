@@ -10,14 +10,24 @@
 # or submit itself to any jurisdiction.
 
 o2physics_add_dpl_workflow(event-selection-qa
-                           SOURCES eventSelectionQa.cxx
-                           PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::AnalysisCCDB O2::DetectorsBase
-                           COMPONENT_NAME Analysis)
+    SOURCES eventSelectionQa.cxx
+    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::AnalysisCCDB O2::DetectorsBase
+    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(qa-pileup
+    SOURCES qaPileup.cxx
+    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+    COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(lumi-qa
-                           SOURCES lumiQa.cxx
-                           PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::AnalysisCCDB O2::DetectorsBase
-                           COMPONENT_NAME Analysis)
+    SOURCES lumiQa.cxx
+    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::AnalysisCCDB O2::DetectorsBase
+    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(bcid-qa
+    SOURCES bcAnalysed.cxx
+    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+    COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(mshape-qa
                            SOURCES mshapeQa.cxx

@@ -14,5 +14,6 @@ add_subdirectory(QC)
 
 # PAGs
 add_subdirectory(Nuspex)
-add_subdirectory(Resonances)
+
+# add_subdirectory(Resonances)
 add_subdirectory(Strangeness)

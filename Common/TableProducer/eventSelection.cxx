@@ -435,7 +435,7 @@ struct EventSelectionTask {
   Configurable<std::string> syst{"syst", "PbPb", "pp, pPb, Pbp, PbPb, XeXe"}; // TODO determine from AOD metadata or from CCDB
   Configurable<int> muonSelection{"muonSelection", 0, "0 - barrel, 1 - muon selection with pileup cuts, 2 - muon selection without pileup cuts"};
   Configurable<float> maxDiffZvtxFT0vsPV{"maxDiffZvtxFT0vsPV", 1., "maximum difference (in cm) between z-vertex from FT0 and PV"};
-  Configurable<bool> isMC{"isMC", 0, "0 - data, 1 - MC"};
+  Configurable<int> isMC{"isMC", 0, "-1 - autoset, 0 - data, 1 - MC"};
   // configurables for occupancy-based event selection
   Configurable<float> confTimeIntervalForOccupancyCalculationMin{"TimeIntervalForOccupancyCalculationMin", -40, "Min time diff window for TPC occupancy calculation, us"};
   Configurable<float> confTimeIntervalForOccupancyCalculationMax{"TimeIntervalForOccupancyCalculationMax", 100, "Max time diff window for TPC occupancy calculation, us"};
@@ -444,7 +444,8 @@ struct EventSelectionTask {
   Configurable<float> confTimeRangeVetoOnCollStandard{"TimeRangeVetoOnCollStandard", 10, "Exclusion of a collision if there are other collisions nearby, +/- us"};
   Configurable<float> confTimeRangeVetoOnCollNarrow{"TimeRangeVetoOnCollNarrow", 4, "Exclusion of a collision if there are other collisions nearby, +/- us"};
   Configurable<bool> confUseWeightsForOccupancyVariable{"UseWeightsForOccupancyEstimator", 1, "Use or not the delta-time weights for the occupancy estimator"};
-
+  Configurable<float> collisionTimeResCut{"collisionTimeResCut", -1.f, "Cut out events with bad event time resolution"};
+  Configurable<bool> askForIsGoodZvtxFT0vsPV{"askForIsGoodZvtxFT0vsPV", false, "Cut out events without kIsGoodZvtxFT0vsPV"};
   Partition<aod::Tracks> tracklets = (aod::track::trackType == static_cast<uint8_t>(o2::aod::track::TrackTypeEnum::Run2Tracklet));
 
   Service<o2::ccdb::BasicCCDBManager> ccdb;
@@ -472,12 +473,22 @@ struct EventSelectionTask {
 
   void init(InitContext&)
   {
-    if (metadataInfo.isFullyDefined() && !doprocessRun2 && !doprocessRun3) { // Check if the metadata is initialized (only if not forced from the workflow configuration)
-      LOG(info) << "Autosetting the processing mode (Run2 or Run3) based on metadata";
-      if (metadataInfo.isRun3()) {
-        doprocessRun3.value = true;
-      } else {
-        doprocessRun2.value = false;
+    if (metadataInfo.isFullyDefined()) { // Check if the metadata is initialized (only if not forced from the workflow configuration)
+      if (!doprocessRun2 && !doprocessRun3) {
+        LOG(info) << "Autosetting the processing mode (Run2 or Run3) based on metadata";
+        if (metadataInfo.isRun3()) {
+          doprocessRun3.value = true;
+        } else {
+          doprocessRun2.value = false;
+        }
+      }
+      if (isMC == -1) {
+        LOG(info) << "Autosetting the MC mode based on metadata";
+        if (metadataInfo.isMC()) {
+          isMC.value = 1;
+        } else {
+          isMC.value = 0;
+        }
       }
     }
 
@@ -502,7 +513,7 @@ struct EventSelectionTask {
     auto bc = col.bc_as<BCsWithBcSelsRun2>();
     EventSelectionParams* par = ccdb->getForTimeStamp<EventSelectionParams>("EventSelection/EventSelectionParams", bc.timestamp());
     bool* applySelection = par->GetSelection(muonSelection);
-    if (isMC) {
+    if (isMC == 1) {
       applySelection[kIsBBZAC] = 0;
       applySelection[kNoV0MOnVsOfPileup] = 0;
       applySelection[kNoSPDOnVsOfPileup] = 0;
@@ -558,7 +569,7 @@ struct EventSelectionTask {
     bool isINT1period = bc.runNumber() <= 136377 || (bc.runNumber() >= 144871 && bc.runNumber() <= 159582);
 
     // fill counters
-    if (isMC || (!isINT1period && bc.alias_bit(kINT7)) || (isINT1period && bc.alias_bit(kINT1))) {
+    if (isMC == 1 || (!isINT1period && bc.alias_bit(kINT7)) || (isINT1period && bc.alias_bit(kINT1))) {
       histos.get<TH1>(HIST("hColCounterAll"))->Fill(Form("%d", bc.runNumber()), 1);
       if ((!isINT1period && sel7) || (isINT1period && sel1)) {
         histos.get<TH1>(HIST("hColCounterAcc"))->Fill(Form("%d", bc.runNumber()), 1);
@@ -897,9 +908,14 @@ struct EventSelectionTask {
       if (sel8) {
         histos.get<TH1>(HIST("hColCounterAcc"))->Fill(Form("%d", bc.runNumber()), 1);
       }
-
       int nTracksITS567inFullTimeWin = vNumTracksITS567inFullTimeWin[colIndex];
       // histos.get<TH1>(HIST("hOccupancy"))->Fill(nTracksITS567inFullTimeWin);
+      if (collisionTimeResCut.value > 0.f) {
+        sel8 = sel8 && col.collisionTimeRes() < collisionTimeResCut;
+      }
+      if (askForIsGoodZvtxFT0vsPV.value) {
+        sel8 = sel8 && isGoodZvtxFT0vsPV;
+      }
 
       evsel(alias, selection, sel7, sel8, foundBC, foundFT0, foundFV0, foundFDD, foundZDC, nTracksITS567inFullTimeWin);
     }
