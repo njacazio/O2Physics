@@ -140,6 +140,9 @@ struct CentralityTable {
   void init(InitContext& context)
   {
     LOG(info) << "Initializing centrality table producer";
+    if (doprocessRun3FT0 == true) {
+      LOG(fatal) << "FT0 only mode is automatically enabled in Run3 mode. Please disable it and enable processRun3.";
+    }
     if (doprocessRun2 == false && doprocessRun3 == false) {
       LOGF(fatal, "Neither processRun2 nor processRun3 enabled. Please choose one.");
     }
@@ -168,6 +171,12 @@ struct CentralityTable {
 
     if (mEnabledTables.size() == 0) {
       LOGF(fatal, "No table enabled. Please enable at least one table.");
+    }
+    // Check if FT0 is the only centrality needed
+    if (mEnabledTables.size() == 1 && mEnabledTables[kCentFT0Ms] == true) {
+      LOG(info) << "FT0 only mode is enabled";
+      doprocessRun3FT0 = true;
+      doprocessRun3 = false;
     }
 
     ccdb->setURL(ccdbUrl);
@@ -360,7 +369,14 @@ struct CentralityTable {
 
   using BCsWithTimestamps = soa::Join<aod::BCs, aod::Timestamps>;
 
-  void processRun3(soa::Join<aod::Collisions, aod::Mults, aod::MultZeqs> const& collisions, BCsWithTimestamps const&)
+  template <typename CollisionType,
+            bool enableCentFV0As = true,
+            bool enableCentFT0Ms = true,
+            bool enableCentFT0As = true,
+            bool enableCentFT0Cs = true,
+            bool enableCentFDDMs = true,
+            bool enableCentNTPVs = true>
+  void produceRun3Tables(CollisionType const& collisions)
   {
     // do memory reservation for the relevant tables only, please
     for (auto const& table : mEnabledTables) {
@@ -459,7 +475,8 @@ struct CentralityTable {
         }
       }
 
-      auto populateTable = [](auto& table, struct calibrationInfo& estimator, float multiplicity, bool assignOutOfRange) {
+      auto populateTable = [](auto& table, struct calibrationInfo& estimator, float multiplicity) {
+        const bool assignOutOfRange = embedINELgtZEROselection && collision.isInelGt0();
         auto scaleMC = [](float x, float pars[6]) {
           return pow(((pars[0] + pars[1] * pow(x, pars[2])) - pars[3]) / pars[4], 1.0f / pars[5]);
         };
@@ -482,22 +499,34 @@ struct CentralityTable {
       for (auto const& table : mEnabledTables) {
         switch (table) {
           case kCentFV0As:
-            populateTable(centFV0A, FV0AInfo, collision.multZeqFV0A(), collision.multNTracksPVeta1() < 1 && embedINELgtZEROselection);
+            if constexpr (enableCentFV0As) {
+              populateTable(centFV0A, FV0AInfo, collision.multZeqFV0A());
+            }
             break;
           case kCentFT0Ms:
-            populateTable(centFT0M, FT0MInfo, collision.multZeqFT0A() + collision.multZeqFT0C(), collision.multNTracksPVeta1() < 1 && embedINELgtZEROselection);
+            if constexpr (enableCentFT0Ms) {
+              populateTable(centFT0M, FT0MInfo, collision.multZeqFT0A() + collision.multZeqFT0C());
+            }
             break;
           case kCentFT0As:
-            populateTable(centFT0A, FT0AInfo, collision.multZeqFT0A(), collision.multNTracksPVeta1() < 1 && embedINELgtZEROselection);
+            if constexpr (enableCentFT0As) {
+              populateTable(centFT0A, FT0AInfo, collision.multZeqFT0A());
+            }
             break;
           case kCentFT0Cs:
-            populateTable(centFT0C, FT0CInfo, collision.multZeqFT0C(), collision.multNTracksPVeta1() < 1 && embedINELgtZEROselection);
+            if constexpr (enableCentFT0Cs) {
+              populateTable(centFT0C, FT0CInfo, collision.multZeqFT0C());
+            }
             break;
           case kCentFDDMs:
-            populateTable(centFDDM, FDDMInfo, collision.multZeqFDDA() + collision.multZeqFDDC(), collision.multNTracksPVeta1() < 1 && embedINELgtZEROselection);
+            if constexpr (enableCentFDDMs) {
+              populateTable(centFDDM, FDDMInfo, collision.multZeqFDDA() + collision.multZeqFDDC());
+            }
             break;
           case kCentNTPVs:
-            populateTable(centNTPV, NTPVInfo, collision.multZeqNTracksPV(), collision.multNTracksPVeta1() < 1 && embedINELgtZEROselection);
+            if constexpr (enableCentNTPVs) {
+              populateTable(centNTPV, NTPVInfo, collision.multZeqNTracksPV());
+            }
             break;
           default:
             LOGF(fatal, "Table %d not supported in Run3", table);
@@ -506,11 +535,24 @@ struct CentralityTable {
       }
     }
   }
+
+  void processRun3(soa::Join<aod::Collisions, aod::Mults, aod::MultZeqs> const& collisions, BCsWithTimestamps const&)
+  {
+    produceRun3Tables(collisions);
+  }
   PROCESS_SWITCH(CentralityTable, processRun3, "Provide Run3 calibrated centrality/multiplicity percentiles tables", false);
+
+  void processRun3FT0(soa::Join<aod::Collisions, aod::FT0Mults, aod::PVMultZeqs> const& collisions, BCsWithTimestamps const&)
+  {
+    produceRun3Tables<soa::Join<aod::Collisions, aod::FT0Mults, aod::PVMults>,
+                      false,
+                      true,
+                      false,
+                      false,
+                      false,
+                      false>(collisions);
+  }
+  PROCESS_SWITCH(CentralityTable, processRun3FT0, "Provide Run3 calibrated centrality/multiplicity percentiles tables for FT0 only", false);
 };
 
-WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
-{
-  return WorkflowSpec{
-    adaptAnalysisTask<CentralityTable>(cfgc)};
-}
+WorkflowSpec defineDataProcessing(ConfigContext const& cfgc) { return WorkflowSpec{adaptAnalysisTask<CentralityTable>(cfgc)}; }
