@@ -369,13 +369,11 @@ struct CentralityTable {
 
   using BCsWithTimestamps = soa::Join<aod::BCs, aod::Timestamps>;
 
-  template <typename CollisionType,
-            bool enableCentFV0As = true,
-            bool enableCentFT0Ms = true,
-            bool enableCentFT0As = true,
-            bool enableCentFT0Cs = true,
-            bool enableCentFDDMs = true,
-            bool enableCentNTPVs = true>
+  template <bool enableCentFV0 = true,
+            bool enableCentFT0 = true,
+            bool enableCentFDD = true,
+            bool enableCentNTPV = true,
+            typename CollisionType>
   void produceRun3Tables(CollisionType const& collisions)
   {
     // do memory reservation for the relevant tables only, please
@@ -475,7 +473,14 @@ struct CentralityTable {
         }
       }
 
-      auto populateTable = [](auto& table, struct calibrationInfo& estimator, float multiplicity) {
+      /**
+       * @brief Populates a table with data based on the given calibration information and multiplicity.
+       * 
+       * @param table The table to populate.
+       * @param estimator The calibration information.
+       * @param multiplicity The multiplicity value.
+       */
+      auto populateTable = [&](auto& table, struct calibrationInfo& estimator, float multiplicity) {
         const bool assignOutOfRange = embedINELgtZEROselection && collision.isInelGt0();
         auto scaleMC = [](float x, float pars[6]) {
           return pow(((pars[0] + pars[1] * pow(x, pars[2])) - pars[3]) / pars[4], 1.0f / pars[5]);
@@ -499,32 +504,32 @@ struct CentralityTable {
       for (auto const& table : mEnabledTables) {
         switch (table) {
           case kCentFV0As:
-            if constexpr (enableCentFV0As) {
+            if constexpr (enableCentFV0) {
               populateTable(centFV0A, FV0AInfo, collision.multZeqFV0A());
             }
             break;
           case kCentFT0Ms:
-            if constexpr (enableCentFT0Ms) {
+            if constexpr (enableCentFT0) {
               populateTable(centFT0M, FT0MInfo, collision.multZeqFT0A() + collision.multZeqFT0C());
             }
             break;
           case kCentFT0As:
-            if constexpr (enableCentFT0As) {
+            if constexpr (enableCentFT0) {
               populateTable(centFT0A, FT0AInfo, collision.multZeqFT0A());
             }
             break;
           case kCentFT0Cs:
-            if constexpr (enableCentFT0Cs) {
+            if constexpr (enableCentFT0) {
               populateTable(centFT0C, FT0CInfo, collision.multZeqFT0C());
             }
             break;
           case kCentFDDMs:
-            if constexpr (enableCentFDDMs) {
+            if constexpr (enableCentFDD) {
               populateTable(centFDDM, FDDMInfo, collision.multZeqFDDA() + collision.multZeqFDDC());
             }
             break;
           case kCentNTPVs:
-            if constexpr (enableCentNTPVs) {
+            if constexpr (enableCentNTPV) {
               populateTable(centNTPV, NTPVInfo, collision.multZeqNTracksPV());
             }
             break;
@@ -536,20 +541,17 @@ struct CentralityTable {
     }
   }
 
-  void processRun3(soa::Join<aod::Collisions, aod::Mults, aod::MultZeqs> const& collisions, BCsWithTimestamps const&)
+  void processRun3(soa::Join<aod::Collisions, aod::MultZeqs> const& collisions, BCsWithTimestamps const&)
   {
     produceRun3Tables(collisions);
   }
   PROCESS_SWITCH(CentralityTable, processRun3, "Provide Run3 calibrated centrality/multiplicity percentiles tables", false);
 
-  void processRun3FT0(soa::Join<aod::Collisions, aod::FT0Mults, aod::PVMultZeqs> const& collisions, BCsWithTimestamps const&)
+  void processRun3FT0(soa::Join<aod::Collisions, aod::PVMults, aod::FT0MultZeqs, aod::PVMultZeqs> const& collisions, BCsWithTimestamps const&)
   {
-    produceRun3Tables<soa::Join<aod::Collisions, aod::FT0Mults, aod::PVMults>,
-                      false,
-                      true,
-                      false,
-                      false,
-                      false,
+    produceRun3Tables<false, // FV0
+                      true,  // FT0
+                      false, // PV
                       false>(collisions);
   }
   PROCESS_SWITCH(CentralityTable, processRun3FT0, "Provide Run3 calibrated centrality/multiplicity percentiles tables for FT0 only", false);
