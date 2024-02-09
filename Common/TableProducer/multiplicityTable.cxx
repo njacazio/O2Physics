@@ -53,7 +53,7 @@ static const std::vector<std::string> tableNames{"FV0Mults",      // 0
 static const std::vector<std::string> parameterNames{"Enable"};
 static const int defaultParameters[nTables][nParameters]{{-1}, {-1}, {-1}, {-1}, {-1}, {-1}, {-1}, {-1}, {-1}, {-1}, {-1}, {-1}, {-1}};
 
-struct MultiplicityTableTaskIndexed {
+struct MultiplicityTable {
   SliceCache cache;
   Produces<aod::FV0Mults> tableFV0;           // 0
   Produces<aod::FT0Mults> tableFT0;           // 1
@@ -214,7 +214,7 @@ struct MultiplicityTableTaskIndexed {
     tableTpc(multTPC);
     tablePv(multNContribs, multNContribsEta1, multNContribsEtaHalf);
   }
-  PROCESS_SWITCH(MultiplicityTableTaskIndexed, processRun2, "Produce Run 2 multiplicity tables", false);
+  PROCESS_SWITCH(MultiplicityTable, processRun2, "Produce Run 2 multiplicity tables", false);
 
   using Run3Tracks = soa::Join<aod::TracksIU, aod::TracksExtra>;
   Partition<Run3Tracks> tracksIUWithTPC = (aod::track::tpcNClsFindable > (uint8_t)0);
@@ -506,10 +506,10 @@ struct MultiplicityTableTaskIndexed {
       }
     }
   }
-  PROCESS_SWITCH(MultiplicityTableTaskIndexed, processRun3, "Produce Run 3 multiplicity tables", true);
+  PROCESS_SWITCH(MultiplicityTable, processRun3, "Produce Run 3 multiplicity tables", true);
 };
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
-  return WorkflowSpec{adaptAnalysisTask<MultiplicityTableTaskIndexed>(cfgc, TaskName{"multiplicity-table"})};
+  return WorkflowSpec{adaptAnalysisTask<MultiplicityTable>(cfgc)};
 }
