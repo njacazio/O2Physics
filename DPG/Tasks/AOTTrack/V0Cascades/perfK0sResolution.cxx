@@ -174,7 +174,7 @@ struct perfK0sResolution {
     if (ntrack.tpcNSigmaPi() > nSigTPC || ptrack.tpcNSigmaPi() > nSigTPC) {
       return false;
     }
-    if(ntrack.tpcNcls() < extraCutTPCClusters || ptrack.tpcNcls() < extraCutTPCClusters) {
+    if (ntrack.tpcNcls() < extraCutTPCClusters || ptrack.tpcNcls() < extraCutTPCClusters) {
       return false;
     }
     // TOF selection
