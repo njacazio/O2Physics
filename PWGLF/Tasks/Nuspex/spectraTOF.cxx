@@ -1384,6 +1384,12 @@ struct tofSpectra {
       return;
     }
 
+    if constexpr (i == 3 || i == Np + 3) {
+      if (kaonIsPvContrib && !track.isPVContributor()) {
+        return;
+      }
+    }
+
     if (std::abs(mcParticle.y()) > trkselOptions.cfgCutY) {
       return;
     }
@@ -1845,37 +1851,22 @@ struct tofSpectra {
         fillTrackHistograms_MC<i>(track, mcParticle, track.collision_as<CollisionCandidateMC>());
       });
     }
-    if (includeCentralityMC) {
-      for (const auto& collision : collisions) {
-        if (!collision.has_mcCollision()) {
+    for (const auto& collision : collisions) {
+      if (!collision.has_mcCollision()) {
+        continue;
+      }
+      const auto& particlesInCollision = mcParticles.sliceByCached(aod::mcparticle::mcCollisionId, collision.mcCollision().globalIndex(), cache);
+      for (const auto& mcParticle : particlesInCollision) {
+
+        if (std::abs(mcParticle.y()) > trkselOptions.cfgCutY) {
           continue;
         }
-        const auto& particlesInCollision = mcParticles.sliceByCached(aod::mcparticle::mcCollisionId, collision.mcCollision().globalIndex(), cache);
-        for (const auto& mcParticle : particlesInCollision) {
-
-          if (std::abs(mcParticle.y()) > trkselOptions.cfgCutY) {
-            continue;
-          }
-          static_for<0, 17>([&](auto i) {
-            fillParticleHistograms_MC<i>(collision, mcParticle);
-          });
-        }
-      }
-    } else {
-      for (const auto& collision : collisions) {
-        for (const auto& mcParticle : mcParticles) {
-          // if (std::abs(mcParticle.eta()) > cfgCutEta) {
-          //   continue;
-          // }
-          if (std::abs(mcParticle.y()) > trkselOptions.cfgCutY) {
-            continue;
-          }
-          static_for<0, 17>([&](auto i) {
-            fillParticleHistograms_MC<i>(collision, mcParticle);
-          });
-        }
+        static_for<0, 17>([&](auto i) {
+          fillParticleHistograms_MC<i>(collision, mcParticle);
+        });
       }
     }
+
     // Loop on reconstructed collisions
     for (const auto& collision : collisions) {
       if (!collision.has_mcCollision()) {
@@ -1939,3 +1930,4 @@ struct tofSpectra {
 }; // end of spectra task
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc) { return WorkflowSpec{adaptAnalysisTask<tofSpectra>(cfgc)}; }
+
