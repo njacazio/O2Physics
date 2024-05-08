@@ -17,6 +17,11 @@ o2physics_add_dpl_workflow(qa-trackselection
     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
     COMPONENT_NAME Analysis)
 
+o2physics_add_dpl_workflow(qa-fakes
+    SOURCES qaFakeHits.cxx
+    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+    COMPONENT_NAME Analysis)
+
 o2physics_add_dpl_workflow(qa-event-track
     SOURCES qaEventTrack.cxx
     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2::ReconstructionDataFormats
@@ -40,6 +45,11 @@ o2physics_add_dpl_workflow(qa-efficiency
 o2physics_add_dpl_workflow(qa-dca-mc
     SOURCES qaDcaMC.cxx
     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(qa-sign-charge-mc
+    SOURCES qaSignChargeMC.cxx
+    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2::DetectorsVertexing
     COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(qa-match-eff
@@ -69,3 +79,4 @@ o2physics_add_dpl_workflow(tag-and-probe-dmesons
     SOURCES tagAndProbeDmesons.cxx
     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2::DetectorsVertexing
     COMPONENT_NAME Analysis)
+
