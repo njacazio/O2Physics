@@ -212,8 +212,8 @@ struct QaFakeHits {
   // MC process
   // Preslice<o2::aod::Tracks> perCollision = o2::aod::track::collisionId;
   void process(o2::aod::McCollision const& mcCollision,
-              //  o2::soa::SmallGroups<o2::soa::Join<o2::aod::Collisions, o2::aod::McCollisionLabels, o2::aod::EvSels>> const& collisions,
-              //  o2::soa::Join<TrackCandidates, o2::aod::McTrackLabels> const& tracks,
+               //  o2::soa::SmallGroups<o2::soa::Join<o2::aod::Collisions, o2::aod::McCollisionLabels, o2::aod::EvSels>> const& collisions,
+               //  o2::soa::Join<TrackCandidates, o2::aod::McTrackLabels> const& tracks,
                o2::aod::McParticles const& mcParticles)
   {
     // const auto groupedTracks = tracks.sliceBy(perCollision, collision.globalIndex());
