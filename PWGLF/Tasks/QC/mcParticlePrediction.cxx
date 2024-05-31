@@ -41,7 +41,7 @@ struct mcParticlePrediction {
 
   void init(o2::framework::InitContext&)
   {
-    histos.add("collisions", "collisions", {{10, 0, 10}});
+    histos.add("collisions", "collisions", kTH1D, {{10, 0, 10}});
 
     const AxisSpec axisPt{binsPt, "#it{p}_{T} (GeV/#it{c})"};
     const AxisSpec axisEta{binsEta, "#it{p}_{T} (GeV/#it{c})"};
@@ -50,7 +50,7 @@ struct mcParticlePrediction {
     for (int i = 0; i < pid_constants::NIDsTot; i++) {
       for (int j = 0; j < 2; j++) {
         const std::string name = Form("%s/%s", chargeNames[j], PID::getName(i));
-        hpt[j][i] = histos.add<TH3D>((name + "/pt").c_str(), name, {binsPt, binsEta, binsPhi});
+        hpt[j][i] = histos.add<TH3>((name + "/pt").c_str(), name.c_str(), kTH3D, {binsPt, binsEta, binsPhi});
       }
     }
   }
