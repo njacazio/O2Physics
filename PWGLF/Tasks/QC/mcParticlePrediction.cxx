@@ -17,10 +17,12 @@
 /// \brief Task to build the predictions from the models based on the generated particles
 ///
 
+#include "Framework/runDataProcessing.h"
+#include "Framework/AnalysisTask.h"
 #include "Framework/HistogramRegistry.h"
 #include "Framework/StaticFor.h"
 #include "Framework/O2DatabasePDGPlugin.h"
-#include "ReconstructionDataFormats/PID.h"
+#include "PWGLF/Utils/mc.h"
 
 #include "TPDGCode.h"
 
@@ -37,58 +39,14 @@ struct mcParticlePrediction {
   ConfigurableAxis binsPt{"binsPt", {100, -1, 1}, "Binning of the Pt axis"};
   std::array<std::array<std::shared_ptr<TH3>, pid_constants::NIDsTot>, 2> hpt;
 
-  pid_constants::ID pdgToId(const aod::McParticle& particle)
-  {
-    switch (abs(particle.pdgCode())) {
-      case 11:
-        return PID::Electron;
-      case 13:
-        return PID::Muon;
-      case 211:
-        return PID::Pion;
-      case 321:
-        return PID::Kaon;
-      case 2212:
-        return PID::Proton;
-      case 1000010020:
-        return PID::Deuteron;
-      case 1000010030:
-        return PID::Triton;
-      case 1000020030:
-        return PID::Helium3;
-      case 1000020040:
-        return PID::Alpha;
-      case 111:
-        return PID::PI0;
-      case 22:
-        return PID::Photon;
-      case 130:
-        return PID::K0;
-      case 3122:
-        return PID::Lambda;
-      case 1010010030:
-        return PID::HyperTriton;
-      case 1010010040:
-        return PID::Hyperhydrog4;
-      case 3312:
-        return PID::XiMinus;
-      case 3334:
-        return PID::OmegaMinus;
-      default:
-        LOG(info) << "Cannot identify particle with PDG code " << particle.pdgCode() << " and mass " << particle.mass() << " GeV/c^2";
-        break;
-    }
-    return PID::NIDsTot;
-  }
-
   void init(o2::framework::InitContext&)
   {
     const AxisSpec ptAxis{binsPt, "#it{p}_{T} (GeV/#it{c})"};
 
     for (int i = 0; i < pid_constants::NIDsTot; i++) {
       for (int j = 0; j < 2; j++) {
-        const std::string name = Form("%s/%s", chargeNames[j], pid_constants::getName(i));
-        hpt[j][i] = histos.make<TH3D>(name + "/pt", name, binsPt, binsPt, binsPt);
+        const std::string name = Form("%s/%s", chargeNames[j], PID::getName(i));
+        hpt[j][i] = histos.add<TH3D>(name + "/pt", name, {binsPt, binsPt, binsPt});
       }
     }
   }
@@ -96,7 +54,7 @@ struct mcParticlePrediction {
                aod::McParticles const& mcParticles)
   {
     for (const auto& particle : mcParticles) {
-      const auto id = pdgToId(particle);
+      const auto id = o2::pwglf::pdgToId(particle);
       if (id == PID::NIDsTot) {
         continue;
       }
