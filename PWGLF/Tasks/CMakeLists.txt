@@ -10,7 +10,7 @@
 # or submit itself to any jurisdiction.
 
 # Common
-# add_subdirectory(QC)
+add_subdirectory(QC)
 
 # PAGs
 add_subdirectory(Nuspex)
