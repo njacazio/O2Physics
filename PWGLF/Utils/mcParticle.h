@@ -29,48 +29,48 @@ namespace pwglf
 
 /// \brief Convert PDG code to PID index
 template <typename TrackType>
-pid_constants::ID pdgToId(const TrackType& particle)
+o2::track::pid_constants::ID pdgToId(const TrackType& particle)
 {
   switch (abs(particle.pdgCode())) {
     case 11:
-      return PID::Electron;
+      return o2::track::PID::Electron;
     case 13:
-      return PID::Muon;
+      return o2::track::PID::Muon;
     case 211:
-      return PID::Pion;
+      return o2::track::PID::Pion;
     case 321:
-      return PID::Kaon;
+      return o2::track::PID::Kaon;
     case 2212:
-      return PID::Proton;
+      return o2::track::PID::Proton;
     case 1000010020:
-      return PID::Deuteron;
+      return o2::track::PID::Deuteron;
     case 1000010030:
-      return PID::Triton;
+      return o2::track::PID::Triton;
     case 1000020030:
-      return PID::Helium3;
+      return o2::track::PID::Helium3;
     case 1000020040:
-      return PID::Alpha;
+      return o2::track::PID::Alpha;
     case 111:
-      return PID::PI0;
+      return o2::track::PID::PI0;
     case 22:
-      return PID::Photon;
+      return o2::track::PID::Photon;
     case 130:
-      return PID::K0;
+      return o2::track::PID::K0;
     case 3122:
-      return PID::Lambda;
+      return o2::track::PID::Lambda;
     case 1010010030:
-      return PID::HyperTriton;
+      return o2::track::PID::HyperTriton;
     case 1010010040:
-      return PID::Hyperhydrog4;
+      return o2::track::PID::Hyperhydrog4;
     case 3312:
-      return PID::XiMinus;
+      return o2::track::PID::XiMinus;
     case 3334:
-      return PID::OmegaMinus;
+      return o2::track::PID::OmegaMinus;
     default:
       LOG(info) << "Cannot identify particle with PDG code " << particle.pdgCode();
       break;
   }
-  return PID::NIDsTot;
+  return o2::track::PID::NIDsTot;
 }
 
 } // namespace pwglf
