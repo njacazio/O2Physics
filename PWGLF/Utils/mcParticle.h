@@ -10,13 +10,15 @@
 // or submit itself to any jurisdiction.
 
 ///
-/// \file  mc.h
-/// \since 31/05/2024
-/// \brief Utilities to handle the MC information
+/// \file   mcParticle.h
+/// \author Nicolò Jacazio nicolo.jacazio@cern.ch
+/// \author Francesca Ercolessi francesca.ercolessi@cern.ch
+/// \since  31/05/2024
+/// \brief  Utilities to handle the MC information
 ///
 
-#ifndef PWGLF_UTILS_MC_H_
-#define PWGLF_UTILS_MC_H_
+#ifndef PWGLF_UTILS_MCPARTICLE_H_
+#define PWGLF_UTILS_MCPARTICLE_H_
 
 #include "ReconstructionDataFormats/PID.h"
 
@@ -74,4 +76,4 @@ pid_constants::ID pdgToId(const TrackType& particle)
 } // namespace pwglf
 } // namespace o2
 
-#endif // PWGLF_UTILS_MC_H_
+#endif // PWGLF_UTILS_MCPARTICLE_H_

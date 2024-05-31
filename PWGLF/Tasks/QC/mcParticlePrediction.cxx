@@ -11,9 +11,8 @@
 
 ///
 /// \file   mcParticlePrediction.cxx
-/// \author Francesca Ercolessi francesca.ercolessi@cern.ch
 /// \author Nicolò Jacazio nicolo.jacazio@cern.ch
-///
+/// \author Francesca Ercolessi francesca.ercolessi@cern.ch
 /// \brief Task to build the predictions from the models based on the generated particles
 ///
 
@@ -22,7 +21,7 @@
 #include "Framework/HistogramRegistry.h"
 #include "Framework/StaticFor.h"
 #include "Framework/O2DatabasePDGPlugin.h"
-#include "PWGLF/Utils/mc.h"
+#include "PWGLF/Utils/mcParticle.h"
 
 #include "TPDGCode.h"
 
