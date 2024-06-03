@@ -34,7 +34,7 @@ using namespace o2::framework;
 // Particles
 static const std::vector<std::string> parameterNames{"Enable"};
 static constexpr int nParameters = 1;
-static const int defaultParameters[o2::pwglf::PIDExtended::NIDsTot][nParameters]{{0}, {0}, {1}, {1}, {1}, {0}, {0}, {0}, {0}, {0}, {0}, {1}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}};
+static const int defaultParticles[o2::pwglf::PIDExtended::NIDsTot][nParameters]{{0}, {0}, {1}, {1}, {1}, {0}, {0}, {0}, {0}, {0}, {0}, {1}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}};
 bool enabledParticlesArray[o2::pwglf::PIDExtended::NIDsTot];
 
 // Estimators
@@ -54,6 +54,7 @@ struct Estimators {
   static const int ZPC = 12;
   static const int ITS = 13;
   static const int nEstimators = 14;
+
   static constexpr const char* estimatorNames[nEstimators] = {"FT0A",
                                                               "FT0C",
                                                               "FT0AC",
@@ -82,12 +83,12 @@ static const int defaultEstimators[Estimators::nEstimators][nParameters]{{1}, {1
                                                                          {1},           // FV0
                                                                          {1},           // FDD
                                                                          {1},           // FDD
-                                                                         {0},           // ZNA
-                                                                         {0},           // ZNC
-                                                                         {0},           // ZEM1
-                                                                         {0},           // ZEM2
-                                                                         {0},           // ZPA
-                                                                         {0},           // ZPC
+                                                                         {1},           // ZNA
+                                                                         {1},           // ZNC
+                                                                         {1},           // ZEM1
+                                                                         {1},           // ZEM2
+                                                                         {1},           // ZPA
+                                                                         {1},           // ZPC
                                                                          {1}};          // ITS
 
 // Histograms
@@ -110,10 +111,10 @@ struct mcParticlePrediction {
   ConfigurableAxis binsMultiplicity{"binsMultiplicity", {1000, 0, 1000}, "Binning of the Multiplicity axis"};
   ConfigurableAxis binsMultiplicityReco{"binsMultiplicityReco", {1000, 0, 10000}, "Binning of the Multiplicity axis"};
   Configurable<LabeledArray<int>> enabledSpecies{"enabledSpecies",
-                                                 {defaultParameters[0], o2::pwglf::PIDExtended::NIDsTot, nParameters, o2::pwglf::PIDExtended::arrayNames(), parameterNames},
+                                                 {defaultParticles[0], o2::pwglf::PIDExtended::NIDsTot, nParameters, o2::pwglf::PIDExtended::arrayNames(), parameterNames},
                                                  "Particles enabled"};
   Configurable<LabeledArray<int>> enabledEstimators{"enabledEstimators",
-                                                    {defaultParameters[0], Estimators::nEstimators, nParameters, Estimators::arrayNames(), parameterNames},
+                                                    {defaultEstimators[0], Estimators::nEstimators, nParameters, Estimators::arrayNames(), parameterNames},
                                                     "Estimators enabled"};
   Configurable<bool> selectInelGt0{"selectInelGt0", true, "Select only inelastic events"};
   Service<o2::framework::O2DatabasePDG> pdgDB;
