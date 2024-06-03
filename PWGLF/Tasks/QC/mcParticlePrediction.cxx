@@ -144,7 +144,6 @@ struct mcParticlePrediction {
       }
       LOG(info) << "Enabling estimator " << i << " " << Estimators::estimatorNames[i];
       enabledEstimatorsArray[i] = true;
-      continue;
     }
 
     auto h = histos.add<TH1>("particles/yields", "particles", kTH1D, {{o2::pwglf::PIDExtended::NIDsTot, -0.5, -0.5 + o2::pwglf::PIDExtended::NIDsTot}});
@@ -169,7 +168,7 @@ struct mcParticlePrediction {
       LOG(info) << "Enabling particle " << i << " " << o2::pwglf::PIDExtended::getName(i);
       enabledParticlesArray[i] = true;
       for (int j = 0; j < Estimators::nEstimators; j++) {
-        if (!enabledEstimatorsArray[i]) {
+        if (!enabledEstimatorsArray[j]) {
           continue;
         }
         hpt[j][i] = histosPt.add<TH2>(Form("prediction/pt/%s/%s", Estimators::estimatorNames[j], o2::pwglf::PIDExtended::getName(i)), o2::pwglf::PIDExtended::getName(i), kTH2D, {binsPt, axisMultiplicity});
