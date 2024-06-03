@@ -30,12 +30,13 @@
 
 using namespace o2;
 using namespace o2::framework;
+using namespace o2::pwglf;
 
 // Particles
 static const std::vector<std::string> parameterNames{"Enable"};
 static constexpr int nParameters = 1;
-static const int defaultParticles[o2::pwglf::PIDExtended::NIDsTot][nParameters]{{0}, {0}, {1}, {1}, {1}, {0}, {0}, {0}, {0}, {0}, {0}, {1}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}};
-bool enabledParticlesArray[o2::pwglf::PIDExtended::NIDsTot];
+static const int defaultParticles[PIDExtended::NIDsTot][nParameters]{{0}, {0}, {1}, {1}, {1}, {0}, {0}, {0}, {0}, {0}, {0}, {1}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}};
+bool enabledParticlesArray[PIDExtended::NIDsTot];
 
 // Estimators
 struct Estimators {
@@ -83,20 +84,20 @@ static const int defaultEstimators[Estimators::nEstimators][nParameters]{{1}, {1
                                                                          {1},           // FV0
                                                                          {1},           // FDD
                                                                          {1},           // FDD
-                                                                         {1},           // ZNA
-                                                                         {1},           // ZNC
-                                                                         {1},           // ZEM1
-                                                                         {1},           // ZEM2
-                                                                         {1},           // ZPA
-                                                                         {1},           // ZPC
-                                                                         {1}};          // ITS
+                                                                         {0},           // ZNA
+                                                                         {0},           // ZNC
+                                                                         {0},           // ZEM1
+                                                                         {0},           // ZEM2
+                                                                         {0},           // ZPA
+                                                                         {0},           // ZPC
+                                                                         {0}};          // ITS
 
 // Histograms
 std::array<std::shared_ptr<TH1>, Estimators::nEstimators> hestimators;
 std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsVsITSIB;
 std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsReco;
-std::array<std::array<std::shared_ptr<TH2>, o2::pwglf::PIDExtended::NIDsTot>, Estimators::nEstimators> hpt;
-std::array<std::array<std::shared_ptr<TH1>, o2::pwglf::PIDExtended::NIDsTot>, Estimators::nEstimators> hyield;
+std::array<std::array<std::shared_ptr<TH2>, PIDExtended::NIDsTot>, Estimators::nEstimators> hpt;
+std::array<std::array<std::shared_ptr<TH1>, PIDExtended::NIDsTot>, Estimators::nEstimators> hyield;
 
 struct mcParticlePrediction {
 
@@ -111,7 +112,7 @@ struct mcParticlePrediction {
   ConfigurableAxis binsMultiplicity{"binsMultiplicity", {1000, 0, 1000}, "Binning of the Multiplicity axis"};
   ConfigurableAxis binsMultiplicityReco{"binsMultiplicityReco", {1000, 0, 10000}, "Binning of the Multiplicity axis"};
   Configurable<LabeledArray<int>> enabledSpecies{"enabledSpecies",
-                                                 {defaultParticles[0], o2::pwglf::PIDExtended::NIDsTot, nParameters, o2::pwglf::PIDExtended::arrayNames(), parameterNames},
+                                                 {defaultParticles[0], PIDExtended::NIDsTot, nParameters, PIDExtended::arrayNames(), parameterNames},
                                                  "Particles enabled"};
   Configurable<LabeledArray<int>> enabledEstimators{"enabledEstimators",
                                                     {defaultEstimators[0], Estimators::nEstimators, nParameters, Estimators::arrayNames(), parameterNames},
@@ -126,8 +127,8 @@ struct mcParticlePrediction {
     const AxisSpec axisVy{binsVxy, "Vy"};
     const AxisSpec axisVz{binsVz, "Vz"};
     const AxisSpec axisPt{binsPt, "#it{p}_{T} (GeV/#it{c})"};
-    const AxisSpec axisMultiplicity{binsMultiplicity, "Multiplicity"};
-    const AxisSpec axisMultiplicityReco{binsMultiplicityReco, "Multiplicity Reco"};
+    const AxisSpec axisMultiplicity{binsMultiplicity, "Multiplicity (undefined)"};
+    const AxisSpec axisMultiplicityReco{binsMultiplicityReco, "Multiplicity Reco. (undefined)"};
 
     histos.add("collisions/generated", "collisions", kTH1D, {{10, 0, 10}});
     histos.add("collisions/reconstructed", "collisions", kTH1D, {{10, 0, 10}});
@@ -146,9 +147,9 @@ struct mcParticlePrediction {
       enabledEstimatorsArray[i] = true;
     }
 
-    auto h = histos.add<TH1>("particles/yields", "particles", kTH1D, {{o2::pwglf::PIDExtended::NIDsTot, -0.5, -0.5 + o2::pwglf::PIDExtended::NIDsTot}});
-    for (int i = 0; i < o2::pwglf::PIDExtended::NIDsTot; i++) {
-      h->GetXaxis()->SetBinLabel(i + 1, o2::pwglf::PIDExtended::getName(i));
+    auto h = histos.add<TH1>("particles/yields", "particles", kTH1D, {{PIDExtended::NIDsTot, -0.5, -0.5 + PIDExtended::NIDsTot}});
+    for (int i = 0; i < PIDExtended::NIDsTot; i++) {
+      h->GetXaxis()->SetBinLabel(i + 1, PIDExtended::getName(i));
     }
 
     for (int i = 0; i < Estimators::nEstimators; i++) {
@@ -156,23 +157,33 @@ struct mcParticlePrediction {
         continue;
       }
       hestimators[i] = histos.add<TH1>(Form("multiplicity/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH1D, {binsMultiplicity});
+      hestimators[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
+
       hestimatorsVsITSIB[i] = histos.add<TH2>(Form("multiplicity/vsITSIB/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, binsMultiplicity});
+      hestimatorsVsITSIB[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
+      hestimatorsVsITSIB[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[Estimators::ITS]));
+
       hestimatorsReco[i] = histos.add<TH2>(Form("multiplicity/Reco/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, axisMultiplicityReco});
+      hestimatorsReco[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
+      hestimatorsReco[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[i]));
     }
 
-    for (int i = 0; i < o2::pwglf::PIDExtended::NIDsTot; i++) {
-      if (enabledSpecies->get(o2::pwglf::PIDExtended::getName(i), "Enable") != 1) {
+    for (int i = 0; i < PIDExtended::NIDsTot; i++) {
+      if (enabledSpecies->get(PIDExtended::getName(i), "Enable") != 1) {
         enabledParticlesArray[i] = false;
         continue;
       }
-      LOG(info) << "Enabling particle " << i << " " << o2::pwglf::PIDExtended::getName(i);
+      LOG(info) << "Enabling particle " << i << " " << PIDExtended::getName(i);
       enabledParticlesArray[i] = true;
       for (int j = 0; j < Estimators::nEstimators; j++) {
         if (!enabledEstimatorsArray[j]) {
           continue;
         }
-        hpt[j][i] = histosPt.add<TH2>(Form("prediction/pt/%s/%s", Estimators::estimatorNames[j], o2::pwglf::PIDExtended::getName(i)), o2::pwglf::PIDExtended::getName(i), kTH2D, {binsPt, axisMultiplicity});
-        hyield[j][i] = histosYield.add<TH1>(Form("prediction/yield/%s/%s", Estimators::estimatorNames[j], o2::pwglf::PIDExtended::getName(i)), o2::pwglf::PIDExtended::getName(i), kTH1D, {axisMultiplicity});
+        hpt[j][i] = histosPt.add<TH2>(Form("prediction/pt/%s/%s", Estimators::estimatorNames[j], PIDExtended::getName(i)), PIDExtended::getName(i), kTH2D, {axisPt, axisMultiplicity});
+        hpt[j][i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[j]));
+
+        hyield[j][i] = histosYield.add<TH1>(Form("prediction/yield/%s/%s", Estimators::estimatorNames[j], PIDExtended::getName(i)), PIDExtended::getName(i), kTH1D, {axisMultiplicity});
+        hyield[j][i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[j]));
       }
     }
     histos.print();
@@ -285,7 +296,7 @@ struct mcParticlePrediction {
 
     for (const auto& particle : mcParticles) {
       particle.pdgCode();
-      const auto id = o2::pwglf::PIDExtended::pdgToId(particle);
+      const auto id = PIDExtended::pdgToId(particle);
       if (id < 0) {
         continue;
       }
