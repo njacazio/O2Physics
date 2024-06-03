@@ -30,13 +30,15 @@
 
 using namespace o2;
 using namespace o2::framework;
+using namespace o2::pwglf;
 
+// Particles
 static const std::vector<std::string> parameterNames{"Enable"};
 static constexpr int nParameters = 1;
-static const int defaultParameters[o2::pwglf::PIDExtended::NIDsTot][nParameters]{{1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}};
-bool enabledArray[o2::pwglf::PIDExtended::NIDsTot];
+static const int defaultParticles[PIDExtended::NIDsTot][nParameters]{{0}, {0}, {1}, {1}, {1}, {0}, {0}, {0}, {0}, {0}, {0}, {1}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}};
+bool enabledParticlesArray[PIDExtended::NIDsTot];
 
-// Histograms
+// Estimators
 struct Estimators {
   static const int FT0A = 0;
   static const int FT0C = 1;
@@ -68,13 +70,34 @@ struct Estimators {
                                                               "ZPA",
                                                               "ZPC",
                                                               "ITS"};
+  static std::vector<std::string> arrayNames()
+  {
+    std::vector<std::string> names;
+    for (int i = 0; i < nEstimators; i++) {
+      names.push_back(estimatorNames[i]);
+    }
+    return names;
+  }
 };
+bool enabledEstimatorsArray[Estimators::nEstimators];
+static const int defaultEstimators[Estimators::nEstimators][nParameters]{{1}, {1}, {1}, // FT0
+                                                                         {1},           // FV0
+                                                                         {1},           // FDD
+                                                                         {1},           // FDD
+                                                                         {0},           // ZNA
+                                                                         {0},           // ZNC
+                                                                         {0},           // ZEM1
+                                                                         {0},           // ZEM2
+                                                                         {0},           // ZPA
+                                                                         {0},           // ZPC
+                                                                         {0}};          // ITS
 
+// Histograms
 std::array<std::shared_ptr<TH1>, Estimators::nEstimators> hestimators;
 std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsVsITSIB;
 std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsReco;
-std::array<std::array<std::shared_ptr<TH2>, o2::pwglf::PIDExtended::NIDsTot>, Estimators::nEstimators> hpt;
-std::array<std::array<std::shared_ptr<TH1>, o2::pwglf::PIDExtended::NIDsTot>, Estimators::nEstimators> hyield;
+std::array<std::array<std::shared_ptr<TH2>, PIDExtended::NIDsTot>, Estimators::nEstimators> hpt;
+std::array<std::array<std::shared_ptr<TH1>, PIDExtended::NIDsTot>, Estimators::nEstimators> hyield;
 
 struct mcParticlePrediction {
 
@@ -89,8 +112,11 @@ struct mcParticlePrediction {
   ConfigurableAxis binsMultiplicity{"binsMultiplicity", {1000, 0, 1000}, "Binning of the Multiplicity axis"};
   ConfigurableAxis binsMultiplicityReco{"binsMultiplicityReco", {1000, 0, 10000}, "Binning of the Multiplicity axis"};
   Configurable<LabeledArray<int>> enabledSpecies{"enabledSpecies",
-                                                 {defaultParameters[0], o2::pwglf::PIDExtended::NIDsTot, nParameters, o2::pwglf::PIDExtended::arrayNames(), parameterNames},
-                                                 "Bethe Bloch parameters"};
+                                                 {defaultParticles[0], PIDExtended::NIDsTot, nParameters, PIDExtended::arrayNames(), parameterNames},
+                                                 "Particles enabled"};
+  Configurable<LabeledArray<int>> enabledEstimators{"enabledEstimators",
+                                                    {defaultEstimators[0], Estimators::nEstimators, nParameters, Estimators::arrayNames(), parameterNames},
+                                                    "Estimators enabled"};
   Configurable<bool> selectInelGt0{"selectInelGt0", true, "Select only inelastic events"};
   Service<o2::framework::O2DatabasePDG> pdgDB;
 
@@ -101,8 +127,8 @@ struct mcParticlePrediction {
     const AxisSpec axisVy{binsVxy, "Vy"};
     const AxisSpec axisVz{binsVz, "Vz"};
     const AxisSpec axisPt{binsPt, "#it{p}_{T} (GeV/#it{c})"};
-    const AxisSpec axisMultiplicity{binsMultiplicity, "Multiplicity"};
-    const AxisSpec axisMultiplicityReco{binsMultiplicityReco, "Multiplicity Reco"};
+    const AxisSpec axisMultiplicity{binsMultiplicity, "Multiplicity (undefined)"};
+    const AxisSpec axisMultiplicityReco{binsMultiplicityReco, "Multiplicity Reco. (undefined)"};
 
     histos.add("collisions/generated", "collisions", kTH1D, {{10, 0, 10}});
     histos.add("collisions/reconstructed", "collisions", kTH1D, {{10, 0, 10}});
@@ -112,27 +138,52 @@ struct mcParticlePrediction {
     histos.add("particles/vtx/y", "Vy", kTH1D, {axisVy});
     histos.add("particles/vtx/z", "Vz", kTH1D, {axisVz});
 
-    auto h = histos.add<TH1>("particles/yields", "particles", kTH1D, {{o2::pwglf::PIDExtended::NIDsTot, -0.5, -0.5 + o2::pwglf::PIDExtended::NIDsTot}});
-    for (int i = 0; i < o2::pwglf::PIDExtended::NIDsTot; i++) {
-      h->GetXaxis()->SetBinLabel(i + 1, o2::pwglf::PIDExtended::getName(i));
+    for (int i = 0; i < Estimators::nEstimators; i++) {
+      if (enabledEstimators->get(Estimators::estimatorNames[i], "Enable") != 1) {
+        enabledEstimatorsArray[i] = false;
+        continue;
+      }
+      LOG(info) << "Enabling estimator " << i << " " << Estimators::estimatorNames[i];
+      enabledEstimatorsArray[i] = true;
+    }
+
+    auto h = histos.add<TH1>("particles/yields", "particles", kTH1D, {{PIDExtended::NIDsTot, -0.5, -0.5 + PIDExtended::NIDsTot}});
+    for (int i = 0; i < PIDExtended::NIDsTot; i++) {
+      h->GetXaxis()->SetBinLabel(i + 1, PIDExtended::getName(i));
     }
 
     for (int i = 0; i < Estimators::nEstimators; i++) {
-      hestimators[i] = histos.add<TH1>(Form("multiplicity/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH1D, {binsMultiplicity});
-      hestimatorsVsITSIB[i] = histos.add<TH2>(Form("multiplicity/vsITSIB/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, binsMultiplicity});
-      hestimatorsReco[i] = histos.add<TH2>(Form("multiplicity/Reco/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, axisMultiplicityReco});
-    }
-
-    for (int i = 0; i < o2::pwglf::PIDExtended::NIDsTot; i++) {
-      if (enabledSpecies->get(o2::pwglf::PIDExtended::getName(i), "Enable") != 1) {
-        enabledArray[i] = false;
+      if (!enabledEstimatorsArray[i]) {
         continue;
       }
-      LOG(info) << "Enabling particle " << i << " " << o2::pwglf::PIDExtended::getName(i);
-      enabledArray[i] = true;
+      hestimators[i] = histos.add<TH1>(Form("multiplicity/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH1D, {binsMultiplicity});
+      hestimators[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
+
+      hestimatorsVsITSIB[i] = histos.add<TH2>(Form("multiplicity/vsITSIB/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, binsMultiplicity});
+      hestimatorsVsITSIB[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
+      hestimatorsVsITSIB[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[Estimators::ITS]));
+
+      hestimatorsReco[i] = histos.add<TH2>(Form("multiplicity/Reco/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, axisMultiplicityReco});
+      hestimatorsReco[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
+      hestimatorsReco[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[i]));
+    }
+
+    for (int i = 0; i < PIDExtended::NIDsTot; i++) {
+      if (enabledSpecies->get(PIDExtended::getName(i), "Enable") != 1) {
+        enabledParticlesArray[i] = false;
+        continue;
+      }
+      LOG(info) << "Enabling particle " << i << " " << PIDExtended::getName(i);
+      enabledParticlesArray[i] = true;
       for (int j = 0; j < Estimators::nEstimators; j++) {
-        hpt[j][i] = histosPt.add<TH2>(Form("pt/%s/%s", Estimators::estimatorNames[j], o2::pwglf::PIDExtended::getName(i)), o2::pwglf::PIDExtended::getName(i), kTH2D, {binsPt, axisMultiplicity});
-        hyield[j][i] = histosYield.add<TH1>(Form("yield/%s/%s", Estimators::estimatorNames[j], o2::pwglf::PIDExtended::getName(i)), o2::pwglf::PIDExtended::getName(i), kTH1D, {axisMultiplicity});
+        if (!enabledEstimatorsArray[j]) {
+          continue;
+        }
+        hpt[j][i] = histosPt.add<TH2>(Form("prediction/pt/%s/%s", Estimators::estimatorNames[j], PIDExtended::getName(i)), PIDExtended::getName(i), kTH2D, {axisPt, axisMultiplicity});
+        hpt[j][i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[j]));
+
+        hyield[j][i] = histosYield.add<TH1>(Form("prediction/yield/%s/%s", Estimators::estimatorNames[j], PIDExtended::getName(i)), PIDExtended::getName(i), kTH1D, {axisMultiplicity});
+        hyield[j][i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[j]));
       }
     }
     histos.print();
@@ -235,17 +286,21 @@ struct mcParticlePrediction {
     nMult[Estimators::ITS] = countITSIB(mcParticles);
 
     for (int i = 0; i < Estimators::nEstimators; i++) {
+      if (!enabledEstimatorsArray[i]) {
+        continue;
+      }
+
       hestimators[i]->Fill(nMult[i]);
       hestimatorsVsITSIB[i]->Fill(nMult[i], nMult[Estimators::ITS]);
     }
 
     for (const auto& particle : mcParticles) {
       particle.pdgCode();
-      const auto id = o2::pwglf::PIDExtended::pdgToId(particle);
+      const auto id = PIDExtended::pdgToId(particle);
       if (id < 0) {
         continue;
       }
-      if (!enabledArray[id]) {
+      if (!enabledParticlesArray[id]) {
         continue;
       }
 
@@ -264,7 +319,7 @@ struct mcParticlePrediction {
 
       histos.fill(HIST("particles/vtx/x"), particle.vx());
       histos.fill(HIST("particles/vtx/y"), particle.vy());
-      histos.fill(HIST("particles/vtx/z"), particle.vz());
+      histos.fill(HIST("particles/vtx/z"), particle.vz() - mcCollision.posZ());
 
       if (abs(particle.y()) > 0.5) {
         continue;
@@ -272,6 +327,9 @@ struct mcParticlePrediction {
 
       histos.fill(HIST("particles/yields"), id);
       for (int i = 0; i < Estimators::nEstimators; i++) {
+        if (!enabledEstimatorsArray[i]) {
+          continue;
+        }
         hpt[i][id]->Fill(particle.pt(), nMult[i]);
         hyield[i][id]->Fill(nMult[i]);
       }
@@ -309,17 +367,24 @@ struct mcParticlePrediction {
     nMult[Estimators::ZNA] = countZNA(particlesInCollision);
     nMult[Estimators::ZNC] = countZNC(particlesInCollision);
     nMult[Estimators::ITS] = countITSIB(particlesInCollision);
+    float nMultReco[Estimators::nEstimators];
+    nMultReco[Estimators::FT0A] = collision.multFT0A();
+    nMultReco[Estimators::FT0C] = collision.multFT0C();
+    nMultReco[Estimators::FT0AC] = collision.multFT0M();
+    nMultReco[Estimators::FV0A] = collision.multFV0A();
+    nMultReco[Estimators::FDDA] = collision.multFDDA();
+    nMultReco[Estimators::FDDC] = collision.multFDDC();
+    nMultReco[Estimators::FDDAC] = collision.multFDDM();
+    nMultReco[Estimators::ZNA] = collision.multZNA();
+    nMultReco[Estimators::ZNC] = collision.multZNC();
+    nMultReco[Estimators::ITS] = collision.multNTracksPV();
 
-    hestimatorsReco[Estimators::FT0A]->Fill(nMult[Estimators::FT0A], collision.multFT0A());
-    hestimatorsReco[Estimators::FT0C]->Fill(nMult[Estimators::FT0C], collision.multFT0C());
-    hestimatorsReco[Estimators::FT0AC]->Fill(nMult[Estimators::FT0AC], collision.multFT0M());
-    hestimatorsReco[Estimators::FV0A]->Fill(nMult[Estimators::FV0A], collision.multFV0A());
-    hestimatorsReco[Estimators::FDDA]->Fill(nMult[Estimators::FDDA], collision.multFDDA());
-    hestimatorsReco[Estimators::FDDC]->Fill(nMult[Estimators::FDDC], collision.multFDDC());
-    hestimatorsReco[Estimators::FDDAC]->Fill(nMult[Estimators::FDDAC], collision.multFDDM());
-    hestimatorsReco[Estimators::ZNA]->Fill(nMult[Estimators::ZNA], collision.multZNA());
-    hestimatorsReco[Estimators::ZNC]->Fill(nMult[Estimators::ZNC], collision.multZNC());
-    hestimatorsReco[Estimators::ITS]->Fill(nMult[Estimators::ITS], collision.multNTracksPV());
+    for (int i = 0; i < Estimators::nEstimators; i++) {
+      if (!enabledEstimatorsArray[i]) {
+        continue;
+      }
+      hestimatorsReco[i]->Fill(nMult[i], nMultReco[i]);
+    }
   }
   PROCESS_SWITCH(mcParticlePrediction, processReco, "Process the reco info", true);
 };
