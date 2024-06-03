@@ -82,8 +82,10 @@ struct mcParticlePrediction {
   HistogramRegistry histos{"Histos", {}, OutputObjHandlingPolicy::AnalysisObject};
   HistogramRegistry histosYield{"HistosYield", {}, OutputObjHandlingPolicy::AnalysisObject};
   HistogramRegistry histosPt{"HistosPt", {}, OutputObjHandlingPolicy::AnalysisObject};
+  ConfigurableAxis binsEta{"binsEta", {100, -20, 20}, "Binning of the Eta axis"};
   ConfigurableAxis binsPt{"binsPt", {100, 0, 10}, "Binning of the Pt axis"};
   ConfigurableAxis binsMultiplicity{"binsMultiplicity", {1000, 0, 1000}, "Binning of the Multiplicity axis"};
+  ConfigurableAxis binsMultiplicityReco{"binsMultiplicityReco", {1000, 0, 10000}, "Binning of the Multiplicity axis"};
   Configurable<LabeledArray<int>> enabledSpecies{"enabledSpecies",
                                                  {defaultParameters[0], o2::pwglf::PIDExtended::NIDsTot, nParameters, o2::pwglf::PIDExtended::arrayNames(), parameterNames},
                                                  "Bethe Bloch parameters"};
@@ -92,11 +94,15 @@ struct mcParticlePrediction {
 
   void init(o2::framework::InitContext&)
   {
+    const AxisSpec axisEta{binsEta, "#eta"};
     const AxisSpec axisPt{binsPt, "#it{p}_{T} (GeV/#it{c})"};
     const AxisSpec axisMultiplicity{binsMultiplicity, "Multiplicity"};
+    const AxisSpec axisMultiplicityReco{binsMultiplicityReco, "Multiplicity Reco"};
 
     histos.add("collisions", "collisions", kTH1D, {{10, 0, 10}});
     histos.add("collisionsReco", "collisionsReco", kTH1D, {{10, 0, 10}});
+    histos.add("eta/charged", "eta", kTH1D, {axisEta});
+    histos.add("eta/neutral", "eta", kTH1D, {axisEta});
     auto h = histos.add<TH1>("particles", "particles", kTH1D, {{o2::pwglf::PIDExtended::NIDsTot, -0.5, -0.5 + o2::pwglf::PIDExtended::NIDsTot}});
     for (int i = 0; i < o2::pwglf::PIDExtended::NIDsTot; i++) {
       h->GetXaxis()->SetBinLabel(i + 1, o2::pwglf::PIDExtended::getName(i));
@@ -109,7 +115,7 @@ struct mcParticlePrediction {
     for (int i = 0; i < Estimators::nEstimators; i++) {
       hestimators[i] = histos.add<TH1>(Form("multiplicity/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH1D, {binsMultiplicity});
       hestimatorsVsITSIB[i] = histos.add<TH2>(Form("multiplicity/vsITSIB/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, binsMultiplicity});
-      hestimatorsReco[i] = histos.add<TH2>(Form("multiplicity/Reco/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, binsMultiplicity});
+      hestimatorsReco[i] = histos.add<TH2>(Form("multiplicity/Reco/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, axisMultiplicityReco});
     }
 
     for (int i = 0; i < o2::pwglf::PIDExtended::NIDsTot; i++) {
@@ -227,8 +233,18 @@ struct mcParticlePrediction {
         continue;
       }
 
-      if (!particle.isPhysicalPrimary())
+      if (!particle.isPhysicalPrimary()) {
         continue;
+      }
+
+      TParticlePDG* p = pdgDB->GetParticle(particle.pdgCode());
+      if (p) {
+        if (abs(p->Charge()) > 1e-3)
+          histos.fill(HIST("eta/charged"), particle.eta());
+        else {
+          histos.fill(HIST("eta/neutral"), particle.eta());
+        }
+      }
 
       if (abs(particle.y()) > 0.5)
         continue;
