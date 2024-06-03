@@ -96,6 +96,7 @@ static const int defaultEstimators[Estimators::nEstimators][nParameters]{{1}, {1
 std::array<std::shared_ptr<TH1>, Estimators::nEstimators> hestimators;
 std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsVsITSIB;
 std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsReco;
+std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsRecoVsITSIB;
 std::array<std::array<std::shared_ptr<TH2>, PIDExtended::NIDsTot>, Estimators::nEstimators> hpt;
 std::array<std::array<std::shared_ptr<TH1>, PIDExtended::NIDsTot>, Estimators::nEstimators> hyield;
 
@@ -109,7 +110,7 @@ struct mcParticlePrediction {
   ConfigurableAxis binsVxy{"binsVxy", {100, -10, 10}, "Binning of the production vertex (x and y) axis"};
   ConfigurableAxis binsVz{"binsVz", {100, -10, 10}, "Binning of the production vertex (z) axis"};
   ConfigurableAxis binsPt{"binsPt", {100, 0, 10}, "Binning of the Pt axis"};
-  ConfigurableAxis binsMultiplicity{"binsMultiplicity", {1000, 0, 1000}, "Binning of the Multiplicity axis"};
+  ConfigurableAxis binsMultiplicity{"binsMultiplicity", {200, 0, 200}, "Binning of the Multiplicity axis"};
   ConfigurableAxis binsMultiplicityReco{"binsMultiplicityReco", {1000, 0, 10000}, "Binning of the Multiplicity axis"};
   Configurable<LabeledArray<int>> enabledSpecies{"enabledSpecies",
                                                  {defaultParticles[0], PIDExtended::NIDsTot, nParameters, PIDExtended::arrayNames(), parameterNames},
@@ -161,11 +162,15 @@ struct mcParticlePrediction {
 
       hestimatorsVsITSIB[i] = histos.add<TH2>(Form("multiplicity/vsITSIB/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, binsMultiplicity});
       hestimatorsVsITSIB[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
-      hestimatorsVsITSIB[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[Estimators::ITS]));
+      hestimatorsVsITSIB[i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[Estimators::ITS]));
 
       hestimatorsReco[i] = histos.add<TH2>(Form("multiplicity/Reco/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, axisMultiplicityReco});
       hestimatorsReco[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
       hestimatorsReco[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[i]));
+
+      hestimatorsRecoVsITSIB[i] = histos.add<TH2>(Form("multiplicity/RecovsITSIB/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, axisMultiplicityReco});
+      hestimatorsRecoVsITSIB[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[Estimators::ITS]));
+      hestimatorsRecoVsITSIB[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[i]));
     }
 
     for (int i = 0; i < PIDExtended::NIDsTot; i++) {
@@ -317,13 +322,13 @@ struct mcParticlePrediction {
         }
       }
 
-      histos.fill(HIST("particles/vtx/x"), particle.vx());
-      histos.fill(HIST("particles/vtx/y"), particle.vy());
-      histos.fill(HIST("particles/vtx/z"), particle.vz() - mcCollision.posZ());
-
       if (abs(particle.y()) > 0.5) {
         continue;
       }
+
+      histos.fill(HIST("particles/vtx/x"), particle.vx());
+      histos.fill(HIST("particles/vtx/y"), particle.vy());
+      histos.fill(HIST("particles/vtx/z"), particle.vz() - mcCollision.posZ());
 
       histos.fill(HIST("particles/yields"), id);
       for (int i = 0; i < Estimators::nEstimators; i++) {
@@ -384,6 +389,7 @@ struct mcParticlePrediction {
         continue;
       }
       hestimatorsReco[i]->Fill(nMult[i], nMultReco[i]);
+      hestimatorsReco[i]->Fill(nMultReco[i], nMult[Estimators::ITS]);
     }
   }
   PROCESS_SWITCH(mcParticlePrediction, processReco, "Process the reco info", true);
