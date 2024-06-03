@@ -33,7 +33,7 @@ using namespace o2::framework;
 
 static const std::vector<std::string> parameterNames{"Enable"};
 static constexpr int nParameters = 1;
-static const int defaultParameters[o2::pwglf::PIDExtended::NIDsTot][nParameters]{{1}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}};
+static const int defaultParameters[o2::pwglf::PIDExtended::NIDsTot][nParameters]{{1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}};
 bool enabledArray[o2::pwglf::PIDExtended::NIDsTot];
 
 // Histograms
@@ -242,17 +242,16 @@ struct mcParticlePrediction {
 
   Preslice<aod::McParticles> perMCCol = aod::mcparticle::mcCollisionId;
   SliceCache cache;
-  // void processReco(soa::Join<aod::Collisions, aod::McCollisionLabels, aod::Mults, aod::EvSels>::iterator const& collision,
-  void processReco(soa::Join<aod::Collisions, aod::McCollisionLabels, aod::Mults>::iterator const& collision,
+  void processReco(soa::Join<aod::Collisions, aod::McCollisionLabels, aod::Mults, aod::EvSels>::iterator const& collision,
                    aod::McParticles const& mcParticles,
                    aod::McCollisions const&)
   {
     if (!collision.has_mcCollision()) {
       return;
     }
-    // if (!collision.sel8()) {
-    //   return;
-    // }
+    if (!collision.sel8()) {
+      return;
+    }
     const auto& particlesInCollision = mcParticles.sliceByCached(aod::mcparticle::mcCollisionId, collision.mcCollision().globalIndex(), cache);
 
     histos.fill(HIST("collisionsReco"), 0.5);
