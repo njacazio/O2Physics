@@ -22,6 +22,7 @@
 #include "Framework/StaticFor.h"
 #include "Framework/O2DatabasePDGPlugin.h"
 #include "PWGLF/Utils/mcParticle.h"
+#include "Common/DataModel/FT0Corrected.h"
 #include "Common/DataModel/EventSelection.h"
 #include "Common/DataModel/Multiplicity.h"
 #include "PWGLF/Utils/inelGt.h"
@@ -80,23 +81,30 @@ struct Estimators {
   }
 };
 bool enabledEstimatorsArray[Estimators::nEstimators];
-static const int defaultEstimators[Estimators::nEstimators][nParameters]{{1}, {1}, {1}, // FT0
-                                                                         {1},           // FV0
-                                                                         {1},           // FDD
-                                                                         {1},           // FDD
-                                                                         {0},           // ZNA
-                                                                         {0},           // ZNC
-                                                                         {0},           // ZEM1
-                                                                         {0},           // ZEM2
-                                                                         {0},           // ZPA
-                                                                         {0},           // ZPC
-                                                                         {1}};          // ITS
+static const int defaultEstimators[Estimators::nEstimators][nParameters]{{1},  // FT0A
+                                                                         {1},  // FT0C
+                                                                         {1},  // FT0AC
+                                                                         {1},  // FV0A
+                                                                         {1},  // FDDA
+                                                                         {1},  // FDDC
+                                                                         {1},  // FDDAC
+                                                                         {0},  // ZNA
+                                                                         {0},  // ZNC
+                                                                         {0},  // ZEM1
+                                                                         {0},  // ZEM2
+                                                                         {0},  // ZPA
+                                                                         {0},  // ZPC
+                                                                         {1}}; // ITS
 
 // Histograms
 std::array<std::shared_ptr<TH1>, Estimators::nEstimators> hestimators;
-std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsVsITSIB;
-std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsReco;
-std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsRecoVsITSIB;
+std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsVsITS;
+std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsRecoEvGenVsReco;
+std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsRecoEvRecoVsITS;
+std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsRecoEvRecoVsFT0A;
+std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsRecoEvRecoVsBCId;
+std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsRecoEvVsBCId;
+std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hvertexPosZ;
 std::array<std::array<std::shared_ptr<TH2>, PIDExtended::NIDsTot>, Estimators::nEstimators> hpt;
 std::array<std::array<std::shared_ptr<TH1>, PIDExtended::NIDsTot>, Estimators::nEstimators> hyield;
 
@@ -104,13 +112,14 @@ struct mcParticlePrediction {
 
   // Histograms
   HistogramRegistry histos{"Histos", {}, OutputObjHandlingPolicy::AnalysisObject};
+  HistogramRegistry histosRecoEvs{"HistosRecoEvs", {}, OutputObjHandlingPolicy::AnalysisObject};
   HistogramRegistry histosYield{"HistosYield", {}, OutputObjHandlingPolicy::AnalysisObject};
   HistogramRegistry histosPt{"HistosPt", {}, OutputObjHandlingPolicy::AnalysisObject};
   ConfigurableAxis binsEta{"binsEta", {100, -20, 20}, "Binning of the Eta axis"};
   ConfigurableAxis binsVxy{"binsVxy", {100, -10, 10}, "Binning of the production vertex (x and y) axis"};
   ConfigurableAxis binsVz{"binsVz", {100, -10, 10}, "Binning of the production vertex (z) axis"};
   ConfigurableAxis binsPt{"binsPt", {100, 0, 10}, "Binning of the Pt axis"};
-  ConfigurableAxis binsMultiplicity{"binsMultiplicity", {200, -0.5, 199.5}, "Binning of the Multiplicity axis"};
+  ConfigurableAxis binsMultiplicity{"binsMultiplicity", {300, -0.5, 299.5}, "Binning of the Multiplicity axis"};
   ConfigurableAxis binsMultiplicityReco{"binsMultiplicityReco", {1000, -0.5, -0.5 + 10000}, "Binning of the Multiplicity axis"};
   Configurable<LabeledArray<int>> enabledSpecies{"enabledSpecies",
                                                  {defaultParticles[0], PIDExtended::NIDsTot, nParameters, PIDExtended::arrayNames(), parameterNames},
@@ -119,6 +128,7 @@ struct mcParticlePrediction {
                                                     {defaultEstimators[0], Estimators::nEstimators, nParameters, Estimators::arrayNames(), parameterNames},
                                                     "Estimators enabled"};
   Configurable<bool> selectInelGt0{"selectInelGt0", true, "Select only inelastic events"};
+  Configurable<bool> discardMismatchedBCs{"discardMismatchedBCs", false, "Select only collisions with matching BC and MC BC"};
   Service<o2::framework::O2DatabasePDG> pdgDB;
 
   void init(o2::framework::InitContext&)
@@ -166,17 +176,33 @@ struct mcParticlePrediction {
       hestimators[i] = histos.add<TH1>(Form("multiplicity/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH1D, {binsMultiplicity});
       hestimators[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
 
-      hestimatorsVsITSIB[i] = histos.add<TH2>(Form("multiplicity/vsITSIB/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, binsMultiplicity});
-      hestimatorsVsITSIB[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
-      hestimatorsVsITSIB[i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[Estimators::ITS]));
+      hestimatorsVsITS[i] = histos.add<TH2>(Form("multiplicity/vsITS/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, binsMultiplicity});
+      hestimatorsVsITS[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
+      hestimatorsVsITS[i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[Estimators::ITS]));
 
-      hestimatorsReco[i] = histos.add<TH2>(Form("multiplicity/Reco/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, axisMultiplicityReco});
-      hestimatorsReco[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
-      hestimatorsReco[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[i]));
+      hvertexPosZ[i] = histos.add<TH2>(Form("multiplicity/posZ/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {{200, -20, 20, "pos Z"}, axisMultiplicity});
+      hvertexPosZ[i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
 
-      hestimatorsRecoVsITSIB[i] = histos.add<TH2>(Form("multiplicity/RecovsITSIB/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, axisMultiplicityReco});
-      hestimatorsRecoVsITSIB[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[Estimators::ITS]));
-      hestimatorsRecoVsITSIB[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[i]));
+      // Reco events
+      hestimatorsRecoEvGenVsReco[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/GenVsReco/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, axisMultiplicityReco});
+      hestimatorsRecoEvGenVsReco[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
+      hestimatorsRecoEvGenVsReco[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[i]));
+
+      hestimatorsRecoEvRecoVsITS[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/RecoVsITS/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {axisMultiplicityReco, binsMultiplicity});
+      hestimatorsRecoEvRecoVsITS[i]->GetXaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[i]));
+      hestimatorsRecoEvRecoVsITS[i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[Estimators::ITS]));
+
+      hestimatorsRecoEvRecoVsFT0A[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/RecovsFT0A/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {axisMultiplicityReco, binsMultiplicity});
+      hestimatorsRecoEvRecoVsFT0A[i]->GetXaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[i]));
+      hestimatorsRecoEvRecoVsFT0A[i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[Estimators::FT0A]));
+
+      hestimatorsRecoEvRecoVsBCId[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/RecoVsBCId/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {{o2::constants::lhc::LHCMaxBunches, -0.5, -0.5 + o2::constants::lhc::LHCMaxBunches}, binsMultiplicityReco});
+      hestimatorsRecoEvRecoVsBCId[i]->GetXaxis()->SetTitle(Form("BC in orbit"));
+      hestimatorsRecoEvRecoVsBCId[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[i]));
+
+      hestimatorsRecoEvVsBCId[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/VsBCId/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {{o2::constants::lhc::LHCMaxBunches, -0.5, -0.5 + o2::constants::lhc::LHCMaxBunches}, binsMultiplicity});
+      hestimatorsRecoEvVsBCId[i]->GetXaxis()->SetTitle(Form("BC in orbit"));
+      hestimatorsRecoEvVsBCId[i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
     }
 
     for (int i = 0; i < PIDExtended::NIDsTot; i++) {
@@ -210,9 +236,9 @@ struct mcParticlePrediction {
     for (const auto& particle : mcParticles) {
 
       // primary
-      if (!particle.isPhysicalPrimary()) {
-        continue;
-      }
+      // if (!particle.isPhysicalPrimary()) {
+      //   continue;
+      // }
       // if ((particle.vx() * particle.vx() + particle.vy() * particle.vy()) > maxProdRadius * maxProdRadius) {
       //   return false;
       // }
@@ -306,7 +332,8 @@ struct mcParticlePrediction {
       }
 
       hestimators[i]->Fill(nMult[i]);
-      hestimatorsVsITSIB[i]->Fill(nMult[i], nMult[Estimators::ITS]);
+      hestimatorsVsITS[i]->Fill(nMult[i], nMult[Estimators::ITS]);
+      hvertexPosZ[i]->Fill(mcCollision.posZ(), nMult[i]);
     }
 
     for (const auto& particle : mcParticles) {
@@ -353,9 +380,10 @@ struct mcParticlePrediction {
 
   Preslice<aod::McParticles> perMCCol = aod::mcparticle::mcCollisionId;
   SliceCache cache;
-  void processReco(soa::Join<aod::Collisions, aod::McCollisionLabels, aod::Mults, aod::EvSels>::iterator const& collision,
+  void processReco(soa::Join<aod::Collisions, aod::McCollisionLabels, aod::Mults, aod::EvSels, aod::FT0sCorrected>::iterator const& collision,
                    aod::McParticles const& mcParticles,
-                   aod::McCollisions const&)
+                   aod::McCollisions const&,
+                   aod::BCs const&)
   {
     if (!collision.has_mcCollision()) {
       return;
@@ -363,6 +391,17 @@ struct mcParticlePrediction {
     if (!collision.sel8()) {
       return;
     }
+    if (!collision.selection_bit(aod::evsel::kIsBBT0A)) {
+      return;
+    }
+    if (!collision.selection_bit(aod::evsel::kIsBBT0C)) {
+      return;
+    }
+    // Check that the BC in data and MC is the same
+    if (discardMismatchedBCs.value && collision.bc().globalBC() != collision.mcCollision().bc().globalBC()) {
+      return;
+    }
+
     const auto& particlesInCollision = mcParticles.sliceByCached(aod::mcparticle::mcCollisionId, collision.mcCollision().globalIndex(), cache);
 
     histos.fill(HIST("collisions/reconstructed"), 0);
@@ -386,6 +425,7 @@ struct mcParticlePrediction {
     nMult[Estimators::ZNA] = countZNA(particlesInCollision);
     nMult[Estimators::ZNC] = countZNC(particlesInCollision);
     nMult[Estimators::ITS] = countITSIB(particlesInCollision);
+
     float nMultReco[Estimators::nEstimators];
     nMultReco[Estimators::FT0A] = collision.multFT0A();
     nMultReco[Estimators::FT0C] = collision.multFT0C();
@@ -402,8 +442,11 @@ struct mcParticlePrediction {
       if (!enabledEstimatorsArray[i]) {
         continue;
       }
-      hestimatorsReco[i]->Fill(nMult[i], nMultReco[i]);
-      hestimatorsRecoVsITSIB[i]->Fill(nMult[Estimators::ITS], nMultReco[i]);
+      hestimatorsRecoEvGenVsReco[i]->Fill(nMult[i], nMultReco[i]);
+      hestimatorsRecoEvRecoVsITS[i]->Fill(nMultReco[i], nMult[Estimators::ITS]);
+      hestimatorsRecoEvRecoVsFT0A[i]->Fill(nMultReco[i], nMult[Estimators::FT0A]);
+      hestimatorsRecoEvRecoVsBCId[i]->Fill(collision.bc().globalBC() % o2::constants::lhc::LHCMaxBunches, nMult[i]);
+      hestimatorsRecoEvVsBCId[i]->Fill(collision.bc().globalBC() % o2::constants::lhc::LHCMaxBunches, nMultReco[i]);
     }
   }
   PROCESS_SWITCH(mcParticlePrediction, processReco, "Process the reco info", true);
