@@ -90,7 +90,7 @@ static const int defaultEstimators[Estimators::nEstimators][nParameters]{{1}, {1
                                                                          {0},           // ZEM2
                                                                          {0},           // ZPA
                                                                          {0},           // ZPC
-                                                                         {0}};          // ITS
+                                                                         {1}};          // ITS
 
 // Histograms
 std::array<std::shared_ptr<TH1>, Estimators::nEstimators> hestimators;
@@ -110,8 +110,8 @@ struct mcParticlePrediction {
   ConfigurableAxis binsVxy{"binsVxy", {100, -10, 10}, "Binning of the production vertex (x and y) axis"};
   ConfigurableAxis binsVz{"binsVz", {100, -10, 10}, "Binning of the production vertex (z) axis"};
   ConfigurableAxis binsPt{"binsPt", {100, 0, 10}, "Binning of the Pt axis"};
-  ConfigurableAxis binsMultiplicity{"binsMultiplicity", {200, 0, 200}, "Binning of the Multiplicity axis"};
-  ConfigurableAxis binsMultiplicityReco{"binsMultiplicityReco", {1000, 0, 10000}, "Binning of the Multiplicity axis"};
+  ConfigurableAxis binsMultiplicity{"binsMultiplicity", {200, -0.5, 199.5}, "Binning of the Multiplicity axis"};
+  ConfigurableAxis binsMultiplicityReco{"binsMultiplicityReco", {1000, -0.5, -0.5 + 10000}, "Binning of the Multiplicity axis"};
   Configurable<LabeledArray<int>> enabledSpecies{"enabledSpecies",
                                                  {defaultParticles[0], PIDExtended::NIDsTot, nParameters, PIDExtended::arrayNames(), parameterNames},
                                                  "Particles enabled"};
@@ -131,8 +131,14 @@ struct mcParticlePrediction {
     const AxisSpec axisMultiplicity{binsMultiplicity, "Multiplicity (undefined)"};
     const AxisSpec axisMultiplicityReco{binsMultiplicityReco, "Multiplicity Reco. (undefined)"};
 
-    histos.add("collisions/generated", "collisions", kTH1D, {{10, 0, 10}});
-    histos.add("collisions/reconstructed", "collisions", kTH1D, {{10, 0, 10}});
+    auto h = histos.add<TH1>("collisions/generated", "collisions", kTH1D, {{10, -0.5, 9.5}});
+    h->GetXaxis()->SetBinLabel(1, "Read");
+    h->GetXaxis()->SetBinLabel(2, "INELgt0");
+    h->GetXaxis()->SetBinLabel(3, "|Z|<10");
+    h = histos.add<TH1>("collisions/reconstructed", "collisions", kTH1D, {{10, -0.5, 9.5}});
+    h->GetXaxis()->SetBinLabel(1, "Read");
+    h->GetXaxis()->SetBinLabel(2, "INELgt0");
+    h->GetXaxis()->SetBinLabel(3, "|Z|<10");
     histos.add("particles/eta/charged", "eta", kTH1D, {axisEta});
     histos.add("particles/eta/neutral", "eta", kTH1D, {axisEta});
     histos.add("particles/vtx/x", "Vx", kTH1D, {axisVx});
@@ -148,7 +154,7 @@ struct mcParticlePrediction {
       enabledEstimatorsArray[i] = true;
     }
 
-    auto h = histos.add<TH1>("particles/yields", "particles", kTH1D, {{PIDExtended::NIDsTot, -0.5, -0.5 + PIDExtended::NIDsTot}});
+    h = histos.add<TH1>("particles/yields", "particles", kTH1D, {{PIDExtended::NIDsTot, -0.5, -0.5 + PIDExtended::NIDsTot}});
     for (int i = 0; i < PIDExtended::NIDsTot; i++) {
       h->GetXaxis()->SetBinLabel(i + 1, PIDExtended::getName(i));
     }
@@ -272,12 +278,16 @@ struct mcParticlePrediction {
   void process(aod::McCollision const& mcCollision,
                aod::McParticles const& mcParticles)
   {
-    histos.fill(HIST("collisions/generated"), 0.5);
+    histos.fill(HIST("collisions/generated"), 0);
     if (selectInelGt0.value && !o2::pwglf::isINELgt0mc(mcParticles, pdgDB)) {
       return;
     }
 
-    histos.fill(HIST("collisions/generated"), 1.5);
+    histos.fill(HIST("collisions/generated"), 1);
+    if (abs(mcCollision.posZ()) > 10.f) {
+      return;
+    }
+    histos.fill(HIST("collisions/generated"), 2);
     float nMult[Estimators::nEstimators];
     nMult[Estimators::FT0A] = countFT0A(mcParticles);
     nMult[Estimators::FT0C] = countFT0C(mcParticles);
@@ -355,12 +365,16 @@ struct mcParticlePrediction {
     }
     const auto& particlesInCollision = mcParticles.sliceByCached(aod::mcparticle::mcCollisionId, collision.mcCollision().globalIndex(), cache);
 
-    histos.fill(HIST("collisions/reconstructed"), 0.5);
+    histos.fill(HIST("collisions/reconstructed"), 0);
     if (selectInelGt0.value && !o2::pwglf::isINELgt0mc(particlesInCollision, pdgDB)) {
       return;
     }
 
-    histos.fill(HIST("collisions/reconstructed"), 1.5);
+    histos.fill(HIST("collisions/reconstructed"), 1);
+    if (abs(collision.posZ()) > 10.f) {
+      return;
+    }
+    histos.fill(HIST("collisions/reconstructed"), 2);
     float nMult[Estimators::nEstimators];
     nMult[Estimators::FT0A] = countFT0A(particlesInCollision);
     nMult[Estimators::FT0C] = countFT0C(particlesInCollision);
@@ -389,7 +403,7 @@ struct mcParticlePrediction {
         continue;
       }
       hestimatorsReco[i]->Fill(nMult[i], nMultReco[i]);
-      hestimatorsReco[i]->Fill(nMultReco[i], nMult[Estimators::ITS]);
+      hestimatorsRecoVsITSIB[i]->Fill(nMult[Estimators::ITS], nMultReco[i]);
     }
   }
   PROCESS_SWITCH(mcParticlePrediction, processReco, "Process the reco info", true);
