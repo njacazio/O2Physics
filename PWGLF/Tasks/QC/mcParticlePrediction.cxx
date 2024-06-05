@@ -36,7 +36,7 @@ using namespace o2::pwglf;
 // Particles
 static const std::vector<std::string> parameterNames{"Enable"};
 static constexpr int nParameters = 1;
-static const int defaultParticles[PIDExtended::NIDsTot][nParameters]{{0}, {0}, {1}, {1}, {1}, {0}, {0}, {0}, {0}, {0}, {0}, {1}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}};
+static const int defaultParticles[PIDExtended::NIDsTot][nParameters]{{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {1}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}};
 bool enabledParticlesArray[PIDExtended::NIDsTot];
 
 // Estimators
@@ -85,9 +85,9 @@ static const int defaultEstimators[Estimators::nEstimators][nParameters]{{1},  /
                                                                          {1},  // FT0C
                                                                          {1},  // FT0AC
                                                                          {1},  // FV0A
-                                                                         {1},  // FDDA
-                                                                         {1},  // FDDC
-                                                                         {1},  // FDDAC
+                                                                         {0},  // FDDA
+                                                                         {0},  // FDDC
+                                                                         {0},  // FDDAC
                                                                          {0},  // ZNA
                                                                          {0},  // ZNC
                                                                          {0},  // ZEM1
@@ -128,6 +128,7 @@ struct mcParticlePrediction {
                                                     {defaultEstimators[0], Estimators::nEstimators, nParameters, Estimators::arrayNames(), parameterNames},
                                                     "Estimators enabled"};
   Configurable<bool> selectInelGt0{"selectInelGt0", true, "Select only inelastic events"};
+  Configurable<bool> selectPrimaries{"selectPrimaries", true, "Select only primary particles"};
   Configurable<bool> discardMismatchedBCs{"discardMismatchedBCs", false, "Select only collisions with matching BC and MC BC"};
   Service<o2::framework::O2DatabasePDG> pdgDB;
 
@@ -140,6 +141,9 @@ struct mcParticlePrediction {
     const AxisSpec axisPt{binsPt, "#it{p}_{T} (GeV/#it{c})"};
     const AxisSpec axisMultiplicity{binsMultiplicity, "Multiplicity (undefined)"};
     const AxisSpec axisMultiplicityReco{binsMultiplicityReco, "Multiplicity Reco. (undefined)"};
+    const AxisSpec axisBCID{o2::constants::lhc::LHCMaxBunches, -0.5, -0.5 + o2::constants::lhc::LHCMaxBunches, "BC ID in orbit"};
+    const AxisSpec axisBCIDMC{o2::constants::lhc::LHCMaxBunches, -0.5, -0.5 + o2::constants::lhc::LHCMaxBunches, "MC BC ID in orbit"};
+    const AxisSpec axisFT0{1000, -5, 5, "Coll time FT0 (ps)"};
 
     auto h = histos.add<TH1>("collisions/generated", "collisions", kTH1D, {{10, -0.5, 9.5}});
     h->GetXaxis()->SetBinLabel(1, "Read");
@@ -147,8 +151,19 @@ struct mcParticlePrediction {
     h->GetXaxis()->SetBinLabel(3, "|Z|<10");
     h = histos.add<TH1>("collisions/reconstructed", "collisions", kTH1D, {{10, -0.5, 9.5}});
     h->GetXaxis()->SetBinLabel(1, "Read");
-    h->GetXaxis()->SetBinLabel(2, "INELgt0");
-    h->GetXaxis()->SetBinLabel(3, "|Z|<10");
+    h->GetXaxis()->SetBinLabel(2, "has_mcCollision");
+    h->GetXaxis()->SetBinLabel(3, "sel8");
+    h->GetXaxis()->SetBinLabel(4, "kIsBBT0A");
+    h->GetXaxis()->SetBinLabel(5, "kIsBBT0C");
+    h->GetXaxis()->SetBinLabel(6, "globalBC == MC globalBC");
+    h->GetXaxis()->SetBinLabel(7, "isINELgt0mc");
+    h->GetXaxis()->SetBinLabel(8, "VTXz");
+    histos.add("collisions/Reco/BCvsMCBC", "BC vs MC BC", kTH2D, {axisBCID, axisBCIDMC});
+    histos.add("collisions/Reco/collisionTime", "Collision Time", kTH1D, {{1000, -20, 20, "collisionTime"}});
+    histos.add("collisions/Reco/collisionTimeRes", "Collision Time Res", kTH1D, {{1600, 0, 1600, "collisionTimeRes"}});
+    histos.add<TH1>("collisions/Reco/FT0A", "FT0A", kTH1D, {axisFT0})->GetXaxis()->SetTitle("Coll time FT0A (ps)");
+    histos.add<TH1>("collisions/Reco/FT0C", "FT0C", kTH1D, {axisFT0})->GetXaxis()->SetTitle("Coll time FT0C (ps)");
+    histos.add<TH1>("collisions/Reco/FT0AC", "FT0AC", kTH1D, {axisFT0})->GetXaxis()->SetTitle("Coll time FT0AC (ps)");
     histos.add("particles/eta/charged", "eta", kTH1D, {axisEta});
     histos.add("particles/eta/neutral", "eta", kTH1D, {axisEta});
     histos.add("particles/vtx/x", "Vx", kTH1D, {axisVx});
@@ -173,36 +188,36 @@ struct mcParticlePrediction {
       if (!enabledEstimatorsArray[i]) {
         continue;
       }
-      hestimators[i] = histos.add<TH1>(Form("multiplicity/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH1D, {binsMultiplicity});
-      hestimators[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
+      const char* name = Estimators::estimatorNames[i];
+      hestimators[i] = histos.add<TH1>(Form("multiplicity/%s", name), name, kTH1D, {axisMultiplicity});
+      hestimators[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", name));
 
-      hestimatorsVsITS[i] = histos.add<TH2>(Form("multiplicity/vsITS/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, binsMultiplicity});
-      hestimatorsVsITS[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
+      hestimatorsVsITS[i] = histos.add<TH2>(Form("multiplicity/vsITS/%s", name), name, kTH2D, {axisMultiplicity, axisMultiplicity});
+      hestimatorsVsITS[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", name));
       hestimatorsVsITS[i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[Estimators::ITS]));
 
-      hvertexPosZ[i] = histos.add<TH2>(Form("multiplicity/posZ/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {{200, -20, 20, "pos Z"}, axisMultiplicity});
-      hvertexPosZ[i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
+      hvertexPosZ[i] = histos.add<TH2>(Form("multiplicity/posZ/%s", name), name, kTH2D, {{200, -20, 20, "pos Z"}, axisMultiplicity});
+      hvertexPosZ[i]->GetYaxis()->SetTitle(Form("Multiplicity %s", name));
 
       // Reco events
-      hestimatorsRecoEvGenVsReco[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/GenVsReco/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {binsMultiplicity, axisMultiplicityReco});
-      hestimatorsRecoEvGenVsReco[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
-      hestimatorsRecoEvGenVsReco[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[i]));
+      hestimatorsRecoEvGenVsReco[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/GenVsReco/%s", name), name, kTH2D, {axisMultiplicity, axisMultiplicityReco});
+      hestimatorsRecoEvGenVsReco[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", name));
+      hestimatorsRecoEvGenVsReco[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", name));
 
-      hestimatorsRecoEvRecoVsITS[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/RecoVsITS/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {axisMultiplicityReco, binsMultiplicity});
-      hestimatorsRecoEvRecoVsITS[i]->GetXaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[i]));
+      hestimatorsRecoEvRecoVsITS[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/RecoVsITS/%s", name), name, kTH2D, {axisMultiplicityReco, axisMultiplicity});
+      hestimatorsRecoEvRecoVsITS[i]->GetXaxis()->SetTitle(Form("Multiplicity Reco. %s", name));
       hestimatorsRecoEvRecoVsITS[i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[Estimators::ITS]));
 
-      hestimatorsRecoEvRecoVsFT0A[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/RecovsFT0A/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {axisMultiplicityReco, binsMultiplicity});
-      hestimatorsRecoEvRecoVsFT0A[i]->GetXaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[i]));
+      hestimatorsRecoEvRecoVsFT0A[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/RecovsFT0A/%s", name), name, kTH2D, {axisMultiplicityReco, axisMultiplicity});
+      hestimatorsRecoEvRecoVsFT0A[i]->GetXaxis()->SetTitle(Form("Multiplicity Reco. %s", name));
       hestimatorsRecoEvRecoVsFT0A[i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[Estimators::FT0A]));
 
-      hestimatorsRecoEvRecoVsBCId[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/RecoVsBCId/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {{o2::constants::lhc::LHCMaxBunches, -0.5, -0.5 + o2::constants::lhc::LHCMaxBunches}, binsMultiplicityReco});
-      hestimatorsRecoEvRecoVsBCId[i]->GetXaxis()->SetTitle(Form("BC in orbit"));
-      hestimatorsRecoEvRecoVsBCId[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[i]));
+      hestimatorsRecoEvRecoVsBCId[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/RecoVsBCId/%s", name), name, kTH2D, {axisBCID, axisMultiplicityReco});
+      hestimatorsRecoEvRecoVsBCId[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", name));
 
-      hestimatorsRecoEvVsBCId[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/VsBCId/%s", Estimators::estimatorNames[i]), Estimators::estimatorNames[i], kTH2D, {{o2::constants::lhc::LHCMaxBunches, -0.5, -0.5 + o2::constants::lhc::LHCMaxBunches}, binsMultiplicity});
-      hestimatorsRecoEvVsBCId[i]->GetXaxis()->SetTitle(Form("BC in orbit"));
-      hestimatorsRecoEvVsBCId[i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[i]));
+      hestimatorsRecoEvVsBCId[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/VsBCId/%s", name), name, kTH2D,
+                                                          {axisBCID, axisMultiplicity});
+      hestimatorsRecoEvVsBCId[i]->GetYaxis()->SetTitle(Form("Multiplicity %s", name));
     }
 
     for (int i = 0; i < PIDExtended::NIDsTot; i++) {
@@ -216,14 +231,16 @@ struct mcParticlePrediction {
         if (!enabledEstimatorsArray[j]) {
           continue;
         }
-        hpt[j][i] = histosPt.add<TH2>(Form("prediction/pt/%s/%s", Estimators::estimatorNames[j], PIDExtended::getName(i)), PIDExtended::getName(i), kTH2D, {axisPt, axisMultiplicity});
-        hpt[j][i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[j]));
+        const char* name = Estimators::estimatorNames[j];
+        hpt[j][i] = histosPt.add<TH2>(Form("prediction/pt/%s/%s", name, PIDExtended::getName(i)), PIDExtended::getName(i), kTH2D, {axisPt, axisMultiplicity});
+        hpt[j][i]->GetYaxis()->SetTitle(Form("Multiplicity %s", name));
 
-        hyield[j][i] = histosYield.add<TH1>(Form("prediction/yield/%s/%s", Estimators::estimatorNames[j], PIDExtended::getName(i)), PIDExtended::getName(i), kTH1D, {axisMultiplicity});
-        hyield[j][i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[j]));
+        hyield[j][i] = histosYield.add<TH1>(Form("prediction/yield/%s/%s", name, PIDExtended::getName(i)), PIDExtended::getName(i), kTH1D, {axisMultiplicity});
+        hyield[j][i]->GetYaxis()->SetTitle(Form("Multiplicity %s", name));
       }
     }
     histos.print();
+    histosRecoEvs.print();
     histosPt.print();
     histosYield.print();
   }
@@ -236,9 +253,9 @@ struct mcParticlePrediction {
     for (const auto& particle : mcParticles) {
 
       // primary
-      // if (!particle.isPhysicalPrimary()) {
-      //   continue;
-      // }
+      if (selectPrimaries.value && !particle.isPhysicalPrimary()) {
+        continue;
+      }
       // if ((particle.vx() * particle.vx() + particle.vy() * particle.vy()) > maxProdRadius * maxProdRadius) {
       //   return false;
       // }
@@ -385,35 +402,56 @@ struct mcParticlePrediction {
                    aod::McCollisions const&,
                    aod::BCs const&)
   {
+    histos.fill(HIST("collisions/reconstructed"), 0);
     if (!collision.has_mcCollision()) {
       return;
     }
+    histos.fill(HIST("collisions/reconstructed"), 1);
     if (!collision.sel8()) {
       return;
     }
+    histos.fill(HIST("collisions/reconstructed"), 2);
     if (!collision.selection_bit(aod::evsel::kIsBBT0A)) {
       return;
     }
+    histos.fill(HIST("collisions/reconstructed"), 3);
     if (!collision.selection_bit(aod::evsel::kIsBBT0C)) {
       return;
     }
+    histos.fill(HIST("collisions/reconstructed"), 4);
     // Check that the BC in data and MC is the same
     if (discardMismatchedBCs.value && collision.bc().globalBC() != collision.mcCollision().bc().globalBC()) {
       return;
     }
+    histos.fill(HIST("collisions/reconstructed"), 5);
 
     const auto& particlesInCollision = mcParticles.sliceByCached(aod::mcparticle::mcCollisionId, collision.mcCollision().globalIndex(), cache);
 
-    histos.fill(HIST("collisions/reconstructed"), 0);
     if (selectInelGt0.value && !o2::pwglf::isINELgt0mc(particlesInCollision, pdgDB)) {
       return;
     }
+    histos.fill(HIST("collisions/reconstructed"), 6);
 
-    histos.fill(HIST("collisions/reconstructed"), 1);
     if (abs(collision.posZ()) > 10.f) {
       return;
     }
-    histos.fill(HIST("collisions/reconstructed"), 2);
+    histos.fill(HIST("collisions/reconstructed"), 7);
+
+    if (collision.t0ACorrectedValid()) {
+      histos.fill(HIST("collisions/Reco/FT0A"), collision.t0ACorrected());
+    }
+    if (collision.t0CCorrectedValid()) {
+      histos.fill(HIST("collisions/Reco/FT0C"), collision.t0CCorrected());
+    }
+    if (collision.t0ACValid()) {
+      histos.fill(HIST("collisions/Reco/FT0AC"), collision.t0AC());
+    }
+    histos.fill(HIST("collisions/Reco/BCvsMCBC"), collision.bc().globalBC() % o2::constants::lhc::LHCMaxBunches,
+                collision.mcCollision().bc().globalBC() % o2::constants::lhc::LHCMaxBunches);
+
+    histos.fill(HIST("collisions/Reco/collisionTime"), collision.collisionTime());
+    histos.fill(HIST("collisions/Reco/collisionTimeRes"), collision.collisionTimeRes());
+
     float nMult[Estimators::nEstimators];
     nMult[Estimators::FT0A] = countFT0A(particlesInCollision);
     nMult[Estimators::FT0C] = countFT0C(particlesInCollision);
