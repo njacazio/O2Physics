@@ -21,7 +21,7 @@ o2physics_add_dpl_workflow(tpcpid
     COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(mc-centrality
-    SOURCES mcMultiplicity.cxx
+    SOURCES mcCentrality.cxx
     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
     COMPONENT_NAME Analysis)
 
