@@ -12,6 +12,6 @@
 add_subdirectory(DataModel)
 add_subdirectory(Core)
 add_subdirectory(CCDB)
-#add_subdirectory(Tasks)
+add_subdirectory(Tasks)
 add_subdirectory(TableProducer)
 add_subdirectory(Tools)
