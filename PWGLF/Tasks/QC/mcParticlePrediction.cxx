@@ -100,7 +100,9 @@ static const int defaultEstimators[Estimators::nEstimators][nParameters]{{1},  /
 std::array<std::shared_ptr<TH1>, Estimators::nEstimators> hestimators;
 std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsVsITS;
 std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsRecoEvGenVsReco;
+std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsRecoEvGenVsRecoITS;
 std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsRecoEvRecoVsITS;
+std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsRecoEvRecoVsRecoITS;
 std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsRecoEvRecoVsFT0A;
 std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsRecoEvRecoVsBCId;
 std::array<std::shared_ptr<TH2>, Estimators::nEstimators> hestimatorsRecoEvVsBCId;
@@ -204,9 +206,17 @@ struct mcParticlePrediction {
       hestimatorsRecoEvGenVsReco[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", name));
       hestimatorsRecoEvGenVsReco[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", name));
 
+      hestimatorsRecoEvGenVsRecoITS[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/GenVsRecoITS/%s", name), name, kTH2D, {axisMultiplicity, axisMultiplicityReco});
+      hestimatorsRecoEvGenVsRecoITS[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", name));
+      hestimatorsRecoEvGenVsRecoITS[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[Estimators::ITS]));
+
       hestimatorsRecoEvRecoVsITS[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/RecoVsITS/%s", name), name, kTH2D, {axisMultiplicityReco, axisMultiplicity});
       hestimatorsRecoEvRecoVsITS[i]->GetXaxis()->SetTitle(Form("Multiplicity Reco. %s", name));
       hestimatorsRecoEvRecoVsITS[i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[Estimators::ITS]));
+
+      hestimatorsRecoEvRecoVsRecoITS[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/RecoVsITS/%s", name), name, kTH2D, {axisMultiplicityReco, axisMultiplicityReco});
+      hestimatorsRecoEvRecoVsRecoITS[i]->GetXaxis()->SetTitle(Form("Multiplicity Reco. %s", name));
+      hestimatorsRecoEvRecoVsRecoITS[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[Estimators::ITS]));
 
       hestimatorsRecoEvRecoVsFT0A[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/RecovsFT0A/%s", name), name, kTH2D, {axisMultiplicityReco, axisMultiplicity});
       hestimatorsRecoEvRecoVsFT0A[i]->GetXaxis()->SetTitle(Form("Multiplicity Reco. %s", name));
@@ -481,7 +491,9 @@ struct mcParticlePrediction {
         continue;
       }
       hestimatorsRecoEvGenVsReco[i]->Fill(nMult[i], nMultReco[i]);
+      hestimatorsRecoEvGenVsRecoITS[i]->Fill(nMult[i], nMultReco[Estimators::ITS]);
       hestimatorsRecoEvRecoVsITS[i]->Fill(nMultReco[i], nMult[Estimators::ITS]);
+      hestimatorsRecoEvRecoVsRecoITS[i]->Fill(nMultReco[i], nMultReco[Estimators::ITS]);
       hestimatorsRecoEvRecoVsFT0A[i]->Fill(nMultReco[i], nMult[Estimators::FT0A]);
       hestimatorsRecoEvRecoVsBCId[i]->Fill(collision.bc().globalBC() % o2::constants::lhc::LHCMaxBunches, nMult[i]);
       hestimatorsRecoEvVsBCId[i]->Fill(collision.bc().globalBC() % o2::constants::lhc::LHCMaxBunches, nMultReco[i]);
