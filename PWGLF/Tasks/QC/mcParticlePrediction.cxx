@@ -143,6 +143,7 @@ struct mcParticlePrediction {
     const AxisSpec axisPt{binsPt, "#it{p}_{T} (GeV/#it{c})"};
     const AxisSpec axisMultiplicity{binsMultiplicity, "Multiplicity (undefined)"};
     const AxisSpec axisMultiplicityReco{binsMultiplicityReco, "Multiplicity Reco. (undefined)"};
+    const AxisSpec axisMultiplicityRecoITS{100, 0, 100, "Multiplicity Reco. ITS"};
     const AxisSpec axisBCID{o2::constants::lhc::LHCMaxBunches, -0.5, -0.5 + o2::constants::lhc::LHCMaxBunches, "BC ID in orbit"};
     const AxisSpec axisBCIDMC{o2::constants::lhc::LHCMaxBunches, -0.5, -0.5 + o2::constants::lhc::LHCMaxBunches, "MC BC ID in orbit"};
     const AxisSpec axisFT0{1000, -5, 5, "Coll time FT0 (ps)"};
@@ -206,17 +207,15 @@ struct mcParticlePrediction {
       hestimatorsRecoEvGenVsReco[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", name));
       hestimatorsRecoEvGenVsReco[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", name));
 
-      hestimatorsRecoEvGenVsRecoITS[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/GenVsRecoITS/%s", name), name, kTH2D, {axisMultiplicity, axisMultiplicityReco});
+      hestimatorsRecoEvGenVsRecoITS[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/GenVsRecoITS/%s", name), name, kTH2D, {axisMultiplicity, axisMultiplicityRecoITS});
       hestimatorsRecoEvGenVsRecoITS[i]->GetXaxis()->SetTitle(Form("Multiplicity %s", name));
-      hestimatorsRecoEvGenVsRecoITS[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[Estimators::ITS]));
 
       hestimatorsRecoEvRecoVsITS[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/RecoVsITS/%s", name), name, kTH2D, {axisMultiplicityReco, axisMultiplicity});
       hestimatorsRecoEvRecoVsITS[i]->GetXaxis()->SetTitle(Form("Multiplicity Reco. %s", name));
       hestimatorsRecoEvRecoVsITS[i]->GetYaxis()->SetTitle(Form("Multiplicity %s", Estimators::estimatorNames[Estimators::ITS]));
 
-      hestimatorsRecoEvRecoVsRecoITS[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/RecoVsRecoITS/%s", name), name, kTH2D, {axisMultiplicityReco, axisMultiplicityReco});
+      hestimatorsRecoEvRecoVsRecoITS[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/RecoVsRecoITS/%s", name), name, kTH2D, {axisMultiplicityReco, axisMultiplicityRecoITS});
       hestimatorsRecoEvRecoVsRecoITS[i]->GetXaxis()->SetTitle(Form("Multiplicity Reco. %s", name));
-      hestimatorsRecoEvRecoVsRecoITS[i]->GetYaxis()->SetTitle(Form("Multiplicity Reco. %s", Estimators::estimatorNames[Estimators::ITS]));
 
       hestimatorsRecoEvRecoVsFT0A[i] = histosRecoEvs.add<TH2>(Form("multiplicity/Reco/RecovsFT0A/%s", name), name, kTH2D, {axisMultiplicityReco, axisMultiplicity});
       hestimatorsRecoEvRecoVsFT0A[i]->GetXaxis()->SetTitle(Form("Multiplicity Reco. %s", name));
