@@ -23,6 +23,7 @@
 #include "Common/DataModel/Centrality.h"
 #include "CommonConstants/PhysicsConstants.h"
 #include "Framework/O2DatabasePDGPlugin.h"
+#include "PWGLF/DataModel/mcCentrality.h"
 
 using namespace o2;
 using namespace o2::framework;
@@ -236,7 +237,7 @@ struct LfV0qaanalysis {
   Service<o2::framework::O2DatabasePDG> pdgDB;
 
   void processMCReco(soa::Join<aod::Collisions, aod::EvSels, aod::McCollisionLabels, aod::PVMults> const& collisions,
-                     aod::McCollisions const& /*mcCollisions*/,
+                     soa::Join<aod::McCollisions, aod::McCentFT0Ms> const& /*mcCollisions*/,
                      soa::Join<aod::V0Datas, aod::McV0Labels> const& V0s,
                      aod::McParticles const& mcParticles, DauTracksMC const& /*tracks*/)
   {
@@ -250,6 +251,7 @@ struct LfV0qaanalysis {
       if (!collision.has_mcCollision()) {
         continue;
       }
+      const auto &mcCollision = collision.mcCollision_as<soa::Join<aod::McCollisions, aod::McCentFT0Ms>>();
       registry.fill(HIST("hNEvents"), 3.5);
 
       registry.fill(HIST("hNEventsMC_RecoColl"), 0.5);
@@ -318,7 +320,7 @@ struct LfV0qaanalysis {
             TMath::Abs(v0.negTrack_as<DauTracksMC>().eta()) < etadau // &&
         ) {
 
-          float cent = 0.;
+          const float cent = mcCollision.centFT0M();
 
           // Fill table
           myv0s(v0.globalIndex(), v0.pt(), v0.yLambda(), v0.yK0Short(),
@@ -338,7 +340,7 @@ struct LfV0qaanalysis {
       }
 
       // Generated particles
-      const auto particlesInCollision = mcParticles.sliceByCached(aod::mcparticle::mcCollisionId, collision.mcCollision().globalIndex(), cache1);
+      const auto particlesInCollision = mcParticles.sliceByCached(aod::mcparticle::mcCollisionId, mcCollision.globalIndex(), cache1);
 
       for (auto& mcParticle : particlesInCollision) {
         if (!mcParticle.isPhysicalPrimary()) {
@@ -461,6 +463,7 @@ struct LfMyV0s {
     registry.add("TPCNSigmaNegPr", "TPCNSigmaNegPr", {HistType::kTH1F, {{100, -10.0f, 10.0f}}});
     registry.add("PosITSHits", "PosITSHits", {HistType::kTH1F, {{8, -0.5f, 7.5f}}});
     registry.add("NegITSHits", "NegITSHits", {HistType::kTH1F, {{8, -0.5f, 7.5f}}});
+    registry.add("multft0m", "multft0m", {HistType::kTH1F, {{100, 0.f, 100.f}}});
   }
 
   void process(aod::MyV0Candidates const& myv0s)
@@ -488,6 +491,7 @@ struct LfMyV0s {
       registry.fill(HIST("TPCNSigmaNegPr"), candidate.ntpcsigmanegpr());
       registry.fill(HIST("PosITSHits"), candidate.v0positshits());
       registry.fill(HIST("NegITSHits"), candidate.v0negitshits());
+      registry.fill(HIST("multft0m"), candidate.multft0m());
     }
   }
 };
