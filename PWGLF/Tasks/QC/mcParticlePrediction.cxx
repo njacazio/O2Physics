@@ -133,9 +133,12 @@ struct mcParticlePrediction {
   Configurable<bool> selectPrimaries{"selectPrimaries", true, "Select only primary particles"};
   Configurable<bool> discardMismatchedBCs{"discardMismatchedBCs", false, "Select only collisions with matching BC and MC BC"};
   Service<o2::framework::O2DatabasePDG> pdgDB;
+  o2::pwglf::ParticleCounter<o2::framework::O2DatabasePDG> mCounter;
 
   void init(o2::framework::InitContext&)
   {
+    mCounter.mPdgDatabase = pdgDB.service;
+    mCounter.mSelectPrimaries = selectPrimaries.value;
     const AxisSpec axisEta{binsEta, "#eta"};
     const AxisSpec axisVx{binsVxy, "Vx"};
     const AxisSpec axisVy{binsVxy, "Vy"};
@@ -254,78 +257,78 @@ struct mcParticlePrediction {
     histosYield.print();
   }
 
-  template <float etamin, float etamax>
-  float countMultInAcceptance(const aod::McParticles& mcParticles)
-  {
-    static_assert(etamin < etamax, "etamin must be smaller than etamax");
-    float counter = 0;
-    for (const auto& particle : mcParticles) {
+  // template <float etamin, float etamax>
+  // float countMultInAcceptance(const aod::McParticles& mcParticles)
+  // {
+  //   static_assert(etamin < etamax, "etamin must be smaller than etamax");
+  //   float counter = 0;
+  //   for (const auto& particle : mcParticles) {
 
-      // primary
-      if (selectPrimaries.value && !particle.isPhysicalPrimary()) {
-        continue;
-      }
-      // if ((particle.vx() * particle.vx() + particle.vy() * particle.vy()) > maxProdRadius * maxProdRadius) {
-      //   return false;
-      // }
+  //     // primary
+  //     if (selectPrimaries.value && !particle.isPhysicalPrimary()) {
+  //       continue;
+  //     }
+  //     // if ((particle.vx() * particle.vx() + particle.vy() * particle.vy()) > maxProdRadius * maxProdRadius) {
+  //     //   return false;
+  //     // }
 
-      // has pdg
-      TParticlePDG* p = pdgDB->GetParticle(particle.pdgCode());
-      if (!p) {
-        continue;
-      }
-      // is charged
-      if (abs(p->Charge()) == 0) {
-        continue;
-      }
-      // in acceptance
-      if (particle.eta() > etamin && particle.eta() < etamax) {
-        counter++;
-      }
-    }
-    return counter;
-  }
+  //     // has pdg
+  //     TParticlePDG* p = pdgDB->GetParticle(particle.pdgCode());
+  //     if (!p) {
+  //       continue;
+  //     }
+  //     // is charged
+  //     if (abs(p->Charge()) == 0) {
+  //       continue;
+  //     }
+  //     // in acceptance
+  //     if (particle.eta() > etamin && particle.eta() < etamax) {
+  //       counter++;
+  //     }
+  //   }
+  //   return counter;
+  // }
 
-  template <float etamin, float etamax, bool isNeutral = false>
-  float countEnergyInAcceptance(const aod::McParticles& mcParticles)
-  {
-    static_assert(etamin < etamax, "etamin must be smaller than etamax");
-    float counter = 0.f;
-    for (const auto& particle : mcParticles) {
+  // template <float etamin, float etamax, bool isNeutral = false>
+  // float countEnergyInAcceptance(const aod::McParticles& mcParticles)
+  // {
+  //   static_assert(etamin < etamax, "etamin must be smaller than etamax");
+  //   float counter = 0.f;
+  //   for (const auto& particle : mcParticles) {
 
-      // primary
-      if (!particle.isPhysicalPrimary()) {
-        continue;
-      }
-      // has pdg
-      TParticlePDG* p = pdgDB->GetParticle(particle.pdgCode());
-      if (!p) {
-        continue;
-      }
-      // is neutral
-      if constexpr (isNeutral) {
-        if (abs(p->Charge()) > 1e-3)
-          continue;
-      } else {
-        if (abs(p->Charge()) <= 1e-3)
-          continue;
-      }
-      // in acceptance
-      if (particle.eta() > etamin && particle.eta() < etamax) {
-        counter += particle.e();
-      }
-    }
-    return counter;
-  }
+  //     // primary
+  //     if (!particle.isPhysicalPrimary()) {
+  //       continue;
+  //     }
+  //     // has pdg
+  //     TParticlePDG* p = pdgDB->GetParticle(particle.pdgCode());
+  //     if (!p) {
+  //       continue;
+  //     }
+  //     // is neutral
+  //     if constexpr (isNeutral) {
+  //       if (abs(p->Charge()) > 1e-3)
+  //         continue;
+  //     } else {
+  //       if (abs(p->Charge()) <= 1e-3)
+  //         continue;
+  //     }
+  //     // in acceptance
+  //     if (particle.eta() > etamin && particle.eta() < etamax) {
+  //       counter += particle.e();
+  //     }
+  //   }
+  //   return counter;
+  // }
 
-  float countFT0A(const aod::McParticles& mcParticles) { return countMultInAcceptance<3.5f, 4.9f>(mcParticles); }
-  float countFT0C(const aod::McParticles& mcParticles) { return countMultInAcceptance<-3.3f, -2.1f>(mcParticles); }
-  float countFV0A(const aod::McParticles& mcParticles) { return countMultInAcceptance<2.2f, 5.1f>(mcParticles); }
-  float countFDDA(const aod::McParticles& mcParticles) { return countMultInAcceptance<4.9f, 6.3f>(mcParticles); }
-  float countFDDC(const aod::McParticles& mcParticles) { return countMultInAcceptance<-7.f, -4.9f>(mcParticles); }
-  float countZNA(const aod::McParticles& mcParticles) { return countEnergyInAcceptance<8.8f, 100.f>(mcParticles); }
-  float countZNC(const aod::McParticles& mcParticles) { return countEnergyInAcceptance<-100.f, -8.8f>(mcParticles); }
-  float countITSIB(const aod::McParticles& mcParticles) { return countMultInAcceptance<-2.f, 2.f>(mcParticles); }
+  // float countFT0A(const aod::McParticles& mcParticles) { return countMultInAcceptance<3.5f, 4.9f>(mcParticles); }
+  // float countFT0C(const aod::McParticles& mcParticles) { return countMultInAcceptance<-3.3f, -2.1f>(mcParticles); }
+  // float countFV0A(const aod::McParticles& mcParticles) { return countMultInAcceptance<2.2f, 5.1f>(mcParticles); }
+  // float countFDDA(const aod::McParticles& mcParticles) { return countMultInAcceptance<4.9f, 6.3f>(mcParticles); }
+  // float countFDDC(const aod::McParticles& mcParticles) { return countMultInAcceptance<-7.f, -4.9f>(mcParticles); }
+  // float countZNA(const aod::McParticles& mcParticles) { return countEnergyInAcceptance<8.8f, 100.f>(mcParticles); }
+  // float countZNC(const aod::McParticles& mcParticles) { return countEnergyInAcceptance<-100.f, -8.8f>(mcParticles); }
+  // float countITSIB(const aod::McParticles& mcParticles) { return countMultInAcceptance<-2.f, 2.f>(mcParticles); }
 
   void process(aod::McCollision const& mcCollision,
                aod::McParticles const& mcParticles)
@@ -341,16 +344,16 @@ struct mcParticlePrediction {
     }
     histos.fill(HIST("collisions/generated"), 2);
     float nMult[Estimators::nEstimators];
-    nMult[Estimators::FT0A] = countFT0A(mcParticles);
-    nMult[Estimators::FT0C] = countFT0C(mcParticles);
+    nMult[Estimators::FT0A] = mCounter.countFT0A(mcParticles);
+    nMult[Estimators::FT0C] = mCounter.countFT0C(mcParticles);
     nMult[Estimators::FT0AC] = nMult[Estimators::FT0A] + nMult[Estimators::FT0C];
-    nMult[Estimators::FV0A] = countFV0A(mcParticles);
-    nMult[Estimators::FDDA] = countFDDA(mcParticles);
-    nMult[Estimators::FDDC] = countFDDC(mcParticles);
+    nMult[Estimators::FV0A] = mCounter.countFV0A(mcParticles);
+    nMult[Estimators::FDDA] = mCounter.countFDDA(mcParticles);
+    nMult[Estimators::FDDC] = mCounter.countFDDC(mcParticles);
     nMult[Estimators::FDDAC] = nMult[Estimators::FDDA] + nMult[Estimators::FDDC];
-    nMult[Estimators::ZNA] = countZNA(mcParticles);
-    nMult[Estimators::ZNC] = countZNC(mcParticles);
-    nMult[Estimators::ITS] = countITSIB(mcParticles);
+    nMult[Estimators::ZNA] = mCounter.countZNA(mcParticles);
+    nMult[Estimators::ZNC] = mCounter.countZNC(mcParticles);
+    nMult[Estimators::ITS] = mCounter.countITSIB(mcParticles);
 
     for (int i = 0; i < Estimators::nEstimators; i++) {
       if (!enabledEstimatorsArray[i]) {
@@ -462,16 +465,16 @@ struct mcParticlePrediction {
     histos.fill(HIST("collisions/Reco/collisionTimeRes"), collision.collisionTimeRes());
 
     float nMult[Estimators::nEstimators];
-    nMult[Estimators::FT0A] = countFT0A(particlesInCollision);
-    nMult[Estimators::FT0C] = countFT0C(particlesInCollision);
+    nMult[Estimators::FT0A] = mCounter.countFT0A(particlesInCollision);
+    nMult[Estimators::FT0C] = mCounter.countFT0C(particlesInCollision);
     nMult[Estimators::FT0AC] = nMult[Estimators::FT0A] + nMult[Estimators::FT0C];
-    nMult[Estimators::FV0A] = countFV0A(particlesInCollision);
-    nMult[Estimators::FDDA] = countFDDA(particlesInCollision);
-    nMult[Estimators::FDDC] = countFDDC(particlesInCollision);
+    nMult[Estimators::FV0A] = mCounter.countFV0A(particlesInCollision);
+    nMult[Estimators::FDDA] = mCounter.countFDDA(particlesInCollision);
+    nMult[Estimators::FDDC] = mCounter.countFDDC(particlesInCollision);
     nMult[Estimators::FDDAC] = nMult[Estimators::FDDA] + nMult[Estimators::FDDC];
-    nMult[Estimators::ZNA] = countZNA(particlesInCollision);
-    nMult[Estimators::ZNC] = countZNC(particlesInCollision);
-    nMult[Estimators::ITS] = countITSIB(particlesInCollision);
+    nMult[Estimators::ZNA] = mCounter.countZNA(particlesInCollision);
+    nMult[Estimators::ZNC] = mCounter.countZNC(particlesInCollision);
+    nMult[Estimators::ITS] = mCounter.countITSIB(particlesInCollision);
 
     float nMultReco[Estimators::nEstimators];
     nMultReco[Estimators::FT0A] = collision.multFT0A();

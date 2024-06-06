@@ -31,6 +31,8 @@
 #include "TableHelper.h"
 #include "Framework/O2DatabasePDGPlugin.h"
 #include "Common/DataModel/Centrality.h"
+#include "PWGLF/DataModel/mcCentrality.h"
+#include "PWGLF/Utils/mcParticle.h"
 
 using namespace o2;
 using namespace o2::framework;
@@ -41,18 +43,12 @@ using namespace o2::track;
 struct mcCentrality {
 
   // Tables to produce
-  Produces<aod::CentRun2V0Ms> centRun2V0M;
-  Produces<aod::CentRun2V0As> centRun2V0A;
-  Produces<aod::CentRun2SPDTrks> centRun2SPDTracklets;
-  Produces<aod::CentRun2SPDClss> centRun2SPDClusters;
-  Produces<aod::CentRun2CL0s> centRun2CL0;
-  Produces<aod::CentRun2CL1s> centRun2CL1;
-  Produces<aod::CentFV0As> centFV0A;
-  Produces<aod::CentFT0Ms> centFT0M;
-  Produces<aod::CentFT0As> centFT0A;
-  Produces<aod::CentFT0Cs> centFT0C;
-  Produces<aod::CentFDDMs> centFDDM;
-  Produces<aod::CentNTPVs> centNTPV;
+  Produces<aod::McCentFV0As> centFV0A;
+  Produces<aod::McCentFT0Ms> centFT0M;
+  Produces<aod::McCentFT0As> centFT0A;
+  Produces<aod::McCentFT0Cs> centFT0C;
+  Produces<aod::McCentFDDMs> centFDDM;
+  Produces<aod::McCentNTPVs> centNTPV;
 
   // Input parameters
   Service<o2::ccdb::BasicCCDBManager> ccdb;
@@ -61,6 +57,7 @@ struct mcCentrality {
   Configurable<std::string> path{"path", "/tmp/InputCalibMC.root", "path to calib file or ccdb path if begins with ccdb://"};
   Configurable<bool> selectPrimaries{"selectPrimaries", true, "Select only primary particles"};
   Service<o2::framework::O2DatabasePDG> pdgDB;
+  ConfigurableAxis binsPercentile{"binsPercentile", {VARIABLE_WIDTH, 0, 0.001, 0.01, 1.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0}, "Binning of the percentile axis"};
 
   HistogramRegistry histos{"histos", {}, OutputObjHandlingPolicy::AnalysisObject};
 
@@ -70,6 +67,8 @@ struct mcCentrality {
   TH1F* h1dFDD;
   TH1F* h1dNTP;*/
 
+  o2::pwglf::ParticleCounter<o2::framework::O2DatabasePDG> mCounter;
+
   void init(o2::framework::InitContext& initContext)
   {
     // Set up the CCDB
@@ -78,6 +77,11 @@ struct mcCentrality {
     ccdb->setLocalObjectValidityChecking();
     ccdb->setCreatedNotAfter(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     ccdb->setFatalWhenNull(false);
+
+    mCounter.mPdgDatabase = pdgDB.service;
+    mCounter.mSelectPrimaries = selectPrimaries.value;
+    histos.add("FT0M/percentile", "FT0M percentile.", HistType::kTH1D, {{binsPercentile, "FT0M percentile"}});
+    histos.add("FT0M/percentilevsMult", "FT0M percentile.", HistType::kTH2D, {{binsPercentile, "FT0M percentile"}, {1000, 0, 5000, "FT0M mult."}});
 
     TList* lOfInput;
     if (path.value.rfind("ccdb://", 0) == 0) { // Getting post calib. from CCDB
@@ -109,46 +113,14 @@ struct mcCentrality {
     }
   }
 
-  template <float etamin, float etamax>
-  float countMultInAcceptance(const aod::McParticles& mcParticles)
-  {
-    static_assert(etamin < etamax, "etamin must be smaller than etamax");
-    float counter = 0;
-    for (const auto& particle : mcParticles) {
-
-      // primary
-      if (selectPrimaries.value && !particle.isPhysicalPrimary()) {
-        continue;
-      }
-      // has pdg
-      TParticlePDG* p = pdgDB->GetParticle(particle.pdgCode());
-      if (!p) {
-        continue;
-      }
-      // is charged
-      if (abs(p->Charge()) == 0) {
-        continue;
-      }
-      // in acceptance
-      if (particle.eta() > etamin && particle.eta() < etamax) {
-        counter++;
-      }
-    }
-    return counter;
-  }
-
-  float countFT0A(const aod::McParticles& mcParticles) { return countMultInAcceptance<3.5f, 4.9f>(mcParticles); }
-  float countFT0C(const aod::McParticles& mcParticles) { return countMultInAcceptance<-3.3f, -2.1f>(mcParticles); }
-  float countFV0A(const aod::McParticles& mcParticles) { return countMultInAcceptance<2.2f, 5.1f>(mcParticles); }
-
   // Full tables (independent on central calibrations)
   void process(aod::McCollision const& mcCollision,
                aod::McParticles const& mcParticles)
   {
-    const float nFT0M = countFT0A(mcParticles) + countFT0C(mcParticles);
-    /*const float nFT0A = countFT0A(mcParticles);
-    const float nFT0C = countFT0C(mcParticles);
-    const float nFV0A = countFV0A(mcParticles);*/
+    const float nFT0M = mCounter.countFT0A(mcParticles) + mCounter.countFT0C(mcParticles);
+    /*const float nFT0A = mCounter.countFT0A(mcParticles);
+    const float nFT0C = mCounter.countFT0C(mcParticles);
+    const float nFV0A = mCounter.countFV0A(mcParticles);*/
 
     const float valueCentFT0M = h1dFT0M->GetBinContent(h1dFT0M->FindBin(nFT0M));
     /*const float valueCentFT0A = h1dFT0M->GetBinContent(h1dFT0M->FindBin(nFT0A));
@@ -159,6 +131,8 @@ struct mcCentrality {
     /*centFT0A(valueCentFT0A);
     centFT0C(valueCentFT0C);
     centFV0A(valueCentFV0A);*/
+    histos.fill(HIST("FT0M/percentile"), valueCentFT0M);
+    histos.fill(HIST("FT0M/percentilevsMult"), valueCentFT0M, nFT0M);
   }
 };
 

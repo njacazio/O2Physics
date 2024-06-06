@@ -19,10 +19,10 @@ o2physics_add_dpl_workflow(cascadefinder
     PUBLIC_LINK_LIBRARIES O2::DCAFitter O2Physics::AnalysisCore
     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(cascadeflow
-    SOURCES cascadeflow.cxx
-    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2Physics::MLCore
-    COMPONENT_NAME Analysis)
+# o2physics_add_dpl_workflow(cascadeflow
+#     SOURCES cascadeflow.cxx
+#     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2Physics::MLCore
+#     COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(cascademcbuilder
     SOURCES cascademcbuilder.cxx
