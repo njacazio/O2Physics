@@ -479,7 +479,7 @@ struct CentralityTable {
         LOGF(info, "timestamp=%llu, run number=%d", bc.timestamp(), bc.runNumber());
         TList* callst = ccdb->getForTimeStamp<TList>(ccdbPath, bc.timestamp());
         if (getCalibFromFile.value) {
-          TFile f("/tmp/newcalib.root");
+          TFile f("/home/PERSONALE/nicolo.jacazio2/newcalib.root");
           f.GetObject("calib-list", callst);
           if (!callst) {
             f.ls();

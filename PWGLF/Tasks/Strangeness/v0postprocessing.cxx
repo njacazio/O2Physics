@@ -137,6 +137,8 @@ struct v0postprocessing {
         continue;
       if (TMath::Abs(candidate.ntpcsigmapospi()) > ntpcsigma)
         continue;
+if (candidate.evflag() < 1)
+        continue;
 
       // K0Short analysis
       if (candidate.v0cospa() > cospaK0s &&

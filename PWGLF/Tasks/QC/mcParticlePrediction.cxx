@@ -26,6 +26,7 @@
 #include "Common/DataModel/EventSelection.h"
 #include "Common/DataModel/Multiplicity.h"
 #include "PWGLF/Utils/inelGt.h"
+#include "CommonConstants/LHCConstants.h"
 
 #include "TPDGCode.h"
 
