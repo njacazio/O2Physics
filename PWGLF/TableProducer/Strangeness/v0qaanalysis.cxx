@@ -399,7 +399,7 @@ struct LfV0qaanalysis {
         isINELgt0true = true;
         registry.fill(HIST("hNEventsMCGen"), 2.5);
         registry.fill(HIST("hNEventsMC_AllColl"), 1.5);
-        registry.fill(HIST("hCentFT0M_AllColl_MC_INELgt0"), mcCollision.centFT0M());
+        registry.fill(HIST("hCentFT0M_AllColl_MC_INELgt0"), mccollision.centFT0M());
       }
 
       for (auto& mcParticle : particlesInMCCollision) {
