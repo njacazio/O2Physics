@@ -74,6 +74,10 @@ struct LfV0qaanalysis {
     registry.add("hCentFT0M", "hCentFT0M", {HistType::kTH1F, {{1000, 0.f, 100.f}}});
     registry.add("hCentFV0A", "hCentFV0A", {HistType::kTH1F, {{1000, 0.f, 100.f}}});
     if (isMC) {
+      egistry.add("hCentFT0M_RecoColl_MC", "hCentFT0M_RecoColl_MC", {HistType::kTH1F, {{1000, 0.f, 100.f}}});
+      registry.add("hCentFT0M_RecoColl_MC_INELgt0", "hCentFT0M_RecoColl_MC_INELgt0", {HistType::kTH1F, {{1000, 0.f, 100.f}}});
+      registry.add("hCentFT0M_AllColl_MC", "hCentFT0M_AllColl_MC", {HistType::kTH1F, {{1000, 0.f, 100.f}}});
+      registry.add("hCentFT0M_AllColl_MC_INELgt0", "hCentFT0M_AllColl_MC_INELgt0", {HistType::kTH1F, {{1000, 0.f, 100.f}}});
       registry.add("hNEventsMCGen", "hNEventsMCGen", {HistType::kTH1I, {{4, 0.f, 4.f}}});
       registry.get<TH1>(HIST("hNEventsMCGen"))->GetXaxis()->SetBinLabel(1, "all");
       registry.get<TH1>(HIST("hNEventsMCGen"))->GetXaxis()->SetBinLabel(2, "zvertex_true");
@@ -257,13 +261,14 @@ struct LfV0qaanalysis {
       registry.fill(HIST("hNEventsMC_RecoColl"), 0.5);
       const float cent = 0.f;
 
-      registry.fill(HIST("hCentFT0M"), mcCollision.centFT0M());
+      registry.fill(HIST("hCentFT0M_RecoColl_MC"), mcCollision.centFT0M());
 
       // Event flags
       int evFlag = 0;
       if (collision.isInelGt0()) {
         evFlag = 1;
         registry.fill(HIST("hNEventsMC_RecoColl"), 1.5);
+        registry.fill(HIST("hCentFT0M_RecoColl_MC_INELgt0"), mcCollision.centFT0M());
       }
 
       auto v0sThisCollision = V0s.sliceBy(perCol, collision.globalIndex());
@@ -387,12 +392,14 @@ struct LfV0qaanalysis {
       const auto particlesInMCCollision = mcParticles.sliceByCached(aod::mcparticle::mcCollisionId, mccollision.globalIndex(), cache2);
 
       registry.fill(HIST("hNEventsMC_AllColl"), 0.5);
+      registry.fill(HIST("hCentFT0M_AllColl_MC"), mccollision.centFT0M());
 
       bool isINELgt0true = false;
       if (isTrueINELgt0(particlesInMCCollision)) {
         isINELgt0true = true;
         registry.fill(HIST("hNEventsMCGen"), 2.5);
         registry.fill(HIST("hNEventsMC_AllColl"), 1.5);
+        registry.fill(HIST("hCentFT0M_AllColl_MC_INELgt0"), mcCollision.centFT0M());
       }
 
       for (auto& mcParticle : particlesInMCCollision) {
