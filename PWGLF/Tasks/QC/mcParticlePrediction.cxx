@@ -26,6 +26,7 @@
 #include "Common/DataModel/Multiplicity.h"
 #include "PWGLF/Utils/mcParticle.h"
 #include "PWGLF/Utils/inelGt.h"
+#include "CommonConstants/LHCConstants.h"
 
 #include "TPDGCode.h"
 
