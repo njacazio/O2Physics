@@ -626,7 +626,7 @@ struct tofSpectra {
         histos.fill(HIST(hnsigmatpc[id]), track.pt(), nsigmaTPC, multiplicity, track.dcaXY(), track.dcaZ(), track.eta());      // RD
       } else {                                                                                                                 // RD
         histos.fill(HIST(hnsigmatpc[id + Np]), track.pt(), nsigmaTPC, multiplicity, track.dcaXY(), track.dcaZ(), track.eta()); // RD
-      } // RD
+      }                                                                                                                        // RD
     } else {
       if (track.sign() > 0) {
         histos.fill(HIST(hnsigmatpc[id]), track.pt(), nsigmaTPC, multiplicity);
@@ -747,7 +747,7 @@ struct tofSpectra {
           histos.fill(HIST(hnsigmatof[id]), track.pt(), nsigmaTOF, multiplicity, track.dcaXY(), track.dcaZ(), track.eta());      // RD
         } else {                                                                                                                 // RD
           histos.fill(HIST(hnsigmatof[id + Np]), track.pt(), nsigmaTOF, multiplicity, track.dcaXY(), track.dcaZ(), track.eta()); // RD
-        } // RD
+        }                                                                                                                        // RD
       } else {
         if (track.sign() > 0) {
           histos.fill(HIST(hnsigmatof[id]), track.pt(), nsigmaTOF, multiplicity);
@@ -1373,7 +1373,7 @@ struct tofSpectra {
       if (doprocessFullPi == true || doprocessLfFullPi == true) {
         return true;
       }
-    } else if constexpr (id == 2 || id == Np + 2) {
+    } else if constexpr (id == 3 || id == Np + 3) {
       if (doprocessFullKa == true || doprocessLfFullKa == true) {
         return true;
       }
@@ -1610,11 +1610,12 @@ struct tofSpectra {
       return;
     }
 
+    const float multiplicity = getMultiplicityMC(mcCollision);
     if (mcParticle.isPhysicalPrimary()) {
       if (abs(mcCollision.posZ()) < evselOptions.cfgCutVertex) {
-        histos.fill(HIST(hpt_den_prm_mcgoodev[i]), mcParticle.pt());
+        histos.fill(HIST(hpt_den_prm_mcgoodev[i]), mcParticle.pt(), multiplicity);
       } else {
-        histos.fill(HIST(hpt_den_prm_mcbadev[i]), mcParticle.pt());
+        histos.fill(HIST(hpt_den_prm_mcbadev[i]), mcParticle.pt(), multiplicity);
       }
     }
   }
@@ -1657,7 +1658,7 @@ struct tofSpectra {
   {
     // Fill number of generated and reconstructed collisions for normalization
     histos.fill(HIST("MC/GenRecoCollisions"), 1.f, mcCollisions.size());
-    histos.fill(HIST("MC/GenRecoCollisions"), 1.f, mcCollisions.size());
+    histos.fill(HIST("MC/GenRecoCollisions"), 2.f, collisions.size());
 
     for (const auto& track : tracks) {
       if (!track.has_collision()) {
