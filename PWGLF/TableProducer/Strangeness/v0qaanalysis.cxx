@@ -243,7 +243,9 @@ struct LfV0qaanalysis {
       if (collision.isInelGt0()) {
         evFlag = 1;
         registry.fill(HIST("hNEventsMC_RecoColl"), 1.5);
-        registry.fill(HIST("hCentFT0M_RecoColl_MC_INELgt0"), mcCollision.centFT0M());
+        if (pwglf::isINELgtNmc(particlesInCollision, 0, pdgDB)){
+          registry.fill(HIST("hCentFT0M_RecoColl_MC_INELgt0"), mcCollision.centFT0M());
+        }
       }
 
       auto v0sThisCollision = V0s.sliceBy(perCol, collision.globalIndex());
