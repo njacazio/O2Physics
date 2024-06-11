@@ -24,6 +24,8 @@
 #include "CommonConstants/PhysicsConstants.h"
 #include "Framework/O2DatabasePDGPlugin.h"
 #include "PWGLF/DataModel/mcCentrality.h"
+#include "PWGLF/Utils/inelGt.h"
+
 
 using namespace o2;
 using namespace o2::framework;
@@ -136,35 +138,7 @@ struct LfV0qaanalysis {
 
     return true;
   }
-
-  // Event selection
-  template <typename TMcParticles>
-  bool isTrueINELgt0(TMcParticles particles)
-  {
-    int nPart = 0;
-    for (const auto& particle : particles) {
-      if (particle.isPhysicalPrimary() == 0)
-        continue; // consider only primaries
-
-      const auto& pdgInfo = pdgDB->GetParticle(particle.pdgCode());
-      if (!pdgInfo) {
-        continue;
-      }
-      if (TMath::Abs(pdgInfo->Charge()) < 0.001) {
-        continue; // consider only charged particles
-      }
-
-      if (particle.eta() < -1.0 || particle.eta() > 1.0)
-        continue; // consider only particles in |eta| < 1
-
-      nPart++;
-    }
-    if (nPart > 0)
-      return true;
-    else
-      return false;
-  }
-
+                                 
   Filter preFilterV0 = nabs(aod::v0data::dcapostopv) > dcapostopv&&
                                                          nabs(aod::v0data::dcanegtopv) > dcanegtopv&& aod::v0data::dcaV0daughters < dcav0dau;
 
@@ -353,6 +327,10 @@ struct LfV0qaanalysis {
       // Generated particles
       const auto particlesInCollision = mcParticles.sliceByCached(aod::mcparticle::mcCollisionId, mcCollision.globalIndex(), cache1);
 
+      if (!pwglf::isINELgtNmc(particlesInCollision, 0, pdgDB)){
+        continue;
+      }
+
       for (auto& mcParticle : particlesInCollision) {
         if (!mcParticle.isPhysicalPrimary()) {
           continue;
@@ -405,7 +383,7 @@ struct LfV0qaanalysis {
       registry.fill(HIST("hCentFT0M_AllColl_MC"), mccollision.centFT0M());
 
       bool isINELgt0true = false;
-      if (isTrueINELgt0(particlesInMCCollision)) {
+      if (pwglf::isINELgtNmc(particlesInMCCollision, 0, pdgDB)) {
         isINELgt0true = true;
         registry.fill(HIST("hNEventsMCGen"), 2.5);
         registry.fill(HIST("hNEventsMC_AllColl"), 1.5);
