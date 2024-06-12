@@ -26,6 +26,7 @@
 #include "Common/DataModel/Multiplicity.h"
 #include "PWGLF/Utils/mcParticle.h"
 #include "PWGLF/Utils/inelGt.h"
+#include "PWGLF/DataModel/LFStrangenessTables.h"
 #include "CommonConstants/LHCConstants.h"
 
 #include "TPDGCode.h"
@@ -176,6 +177,10 @@ struct mcParticlePrediction {
     histos.add("particles/vtx/x", "Vx", kTH1D, {axisVx});
     histos.add("particles/vtx/y", "Vy", kTH1D, {axisVy});
     histos.add("particles/vtx/z", "Vz", kTH1D, {axisVz});
+    histos.add("V0s/V0RecoAssvsPV", "V0s Reco + Ass vs PV", kTH2D, {axisMultiplicityRecoITS, axisMultiplicityRecoITS});
+    histos.add("V0s/V0AssvsPV", "V0s Ass vs PV", kTH2D, {axisMultiplicityRecoITS, axisMultiplicityRecoITS});
+    histos.add("V0s/V0RecoAssvsPV_TOFOneLeg", "V0s Reco + Ass + TOF 1 Leg vs PV", kTH2D, {axisMultiplicityRecoITS, axisMultiplicityRecoITS});
+    histos.add("V0s/V0RecoAssvsPV_TOFTwoLegs", "V0s Reco + Ass + TOF 2 Legs vs PV", kTH2D, {axisMultiplicityRecoITS, axisMultiplicityRecoITS});
 
     for (int i = 0; i < Estimators::nEstimators; i++) {
       if (enabledEstimators->get(Estimators::estimatorNames[i], "Enable") != 1) {
@@ -335,12 +340,16 @@ struct mcParticlePrediction {
     }
   }
 
+  using DauTracksMC = soa::Join<aod::Tracks, aod::TracksExtra, aod::McTrackLabels>;
+
   Preslice<aod::McParticles> perMCCol = aod::mcparticle::mcCollisionId;
   SliceCache cache;
   void processReco(soa::Join<aod::Collisions, aod::McCollisionLabels, aod::Mults, aod::EvSels, aod::FT0sCorrected>::iterator const& collision,
+                   aod::McCollisions const& /*mcCollisions*/,
+                   aod::BCs const& /*bcs*/,
+                   soa::Join<aod::V0Datas, aod::McV0Labels> const& V0s,
                    aod::McParticles const& mcParticles,
-                   aod::McCollisions const&,
-                   aod::BCs const&)
+                   DauTracksMC const& /*tracks*/)
   {
     histos.fill(HIST("collisions/reconstructed"), 0);
     if (!collision.has_mcCollision()) {
@@ -428,6 +437,54 @@ struct mcParticlePrediction {
       hestimatorsRecoEvRecoVsBCId[i]->Fill(collision.bc().globalBC() % o2::constants::lhc::LHCMaxBunches, nMult[i]);
       hestimatorsRecoEvVsBCId[i]->Fill(collision.bc().globalBC() % o2::constants::lhc::LHCMaxBunches, nMultReco[i]);
     }
+
+    int countV0s = 0;
+    int countV0sAss = 0;
+    int countV0sTOF1Leg = 0;
+    int countV0sTOF2Legs = 0;
+    for (auto& v0 : V0s) { // loop over V0s
+
+      if (!v0.has_mcParticle()) {
+        continue;
+      }
+      auto v0mcparticle = v0.mcParticle();
+
+      if (!v0mcparticle.isPhysicalPrimary()) {
+        continue;
+      }
+
+      if (v0mcparticle.pdgCode() != 310){
+        continue;
+      }
+
+      countV0s++;
+
+      if (v0.posTrack_as<DauTracksMC>().hasTOF() || v0.negTrack_as<DauTracksMC>().hasTOF()) {
+        countV0sTOF1Leg++;
+      }
+
+      if (v0.posTrack_as<DauTracksMC>().hasTOF() && v0.negTrack_as<DauTracksMC>().hasTOF()) {
+        countV0sTOF2Legs++;
+      }
+    }
+
+    histos.fill(HIST("V0s/V0RecoAssvsPV"), countV0s, nMultReco[Estimators::ITS]);
+    histos.fill(HIST("V0s/V0RecoAssvsPV_TOFOneLeg"), countV0sTOF1Leg, nMultReco[Estimators::ITS]);
+    histos.fill(HIST("V0s/V0RecoAssvsPV_TOFTwoLegs"), countV0sTOF2Legs, nMultReco[Estimators::ITS]);
+
+    for (auto& mcParticle : particlesInCollision) {
+      if (!mcParticle.isPhysicalPrimary()) {
+        continue;
+      }
+
+      if (mcParticle.pdgCode() != 310) {
+        continue;
+      }
+
+      countV0sAss++;
+    }
+
+    histos.fill(HIST("V0s/V0AssvsPV"), countV0sAss, nMultReco[Estimators::ITS]);
   }
   PROCESS_SWITCH(mcParticlePrediction, processReco, "Process the reco info", true);
 };
