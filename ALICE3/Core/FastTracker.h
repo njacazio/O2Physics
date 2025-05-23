@@ -88,7 +88,6 @@ class FastTracker
   void SetApplyZacceptance(bool b) { applyZacceptance = b; }
   void SetApplyMSCorrection(bool b) { applyMSCorrection = b; }
   void SetApplyElossCorrection(bool b) { applyElossCorrection = b; }
-  // void SetAtLeastHits(int n) { fMinRadTrack = n; }
 
   // Getters for the last track
   int GetNIntercepts() const { return nIntercepts; }
