@@ -24,8 +24,8 @@
 #include "Common/DataModel/FT0Corrected.h"
 #include "Common/DataModel/PIDResponseTOF.h"
 
-#include <DataFormatsFIT/Triggers.h>
 #include <CCDB/BasicCCDBManager.h>
+#include <DataFormatsFIT/Triggers.h>
 #include <DataFormatsParameters/GRPLHCIFData.h>
 #include <DataFormatsTOF/ParameterContainers.h>
 #include <Framework/ASoA.h>
@@ -56,6 +56,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 using namespace o2;
@@ -73,7 +74,12 @@ using Run3TrksWtof = soa::Join<Run3Trks, aod::TOFSignal>;
 using Run3TrksWtofWevTime = soa::Join<Run3TrksWtof, aod::TOFEvTime, aod::pidEvTimeFlags>;
 
 using EvTimeCollisions = soa::Join<Run3Cols, aod::EvSels>;
+// #define MERGEWITHFT0
+#ifndef MERGEWITHFT0
 using EvTimeCollisionsFT0 = soa::Join<EvTimeCollisions, aod::FT0sCorrected>;
+#else
+using EvTimeCollisionsFT0 = EvTimeCollisions;
+#endif
 
 using Run2Trks = o2::soa::Join<aod::Tracks, aod::TracksExtra>;
 using Run2TrksWtofWevTime = soa::Join<Run2Trks, aod::TOFSignal, aod::TOFEvTime, aod::pidEvTimeFlags>;
@@ -537,7 +543,9 @@ struct tofEventTime {
   Produces<o2::aod::TOFEvTime> tableEvTime;
   Produces<o2::aod::EvTimeTOFOnly> tableEvTimeTOFOnly;
   Produces<o2::aod::pidEvTimeFlags> tableFlags;
+#ifdef MERGEWITHFT0
   Produces<o2::aod::FT0sCorrected> tableFt0;
+#endif
   static constexpr bool kRemoveTOFEvTimeBias = true; // Flag to subtract the Ev. Time bias for low multiplicity events with TOF
   static constexpr float kDiamond = 6.0;             // Collision diamond used in the estimation of the TOF event time
   static constexpr float kErrDiamond = kDiamond * 33.356409f;
@@ -660,13 +668,18 @@ struct tofEventTime {
   using ResponseImplementationEvTime = o2::pid::tof::ExpTimes<Run3TrksWtof::iterator, pid>;
   void processRun3(Run3TrksWtof const& tracks,
                    aod::FT0s const&,
+#ifdef MERGEWITHFT0
                    EvTimeCollisions const& collisions,
+#else
+                   EvTimeCollisionsFT0 const&,
+#endif
                    aod::BCsWithTimestamps const& bcs)
   {
     if (!enableTableTOFEvTime) {
       return;
     }
     LOG(debug) << "Processing Run3 data for TOF event time";
+#ifdef MERGEWITHFT0
 
     std::map<uint64_t, std::pair<float, float>> collisionFt0Map;
     tableFt0.reserve(collisions.size());
@@ -696,6 +709,7 @@ struct tofEventTime {
       tableFt0(t0A, t0C);
       collisionFt0Map[collision.globalIndex()] = std::make_pair(t0A, t0C); // Store the T0A and T0C for the collision
     }
+#endif
     tableEvTime.reserve(tracks.size());
     tableFlags.reserve(tracks.size());
     if (enableTableEvTimeTOFOnly) {
@@ -741,8 +755,9 @@ struct tofEventTime {
         lastCollisionId = t.collisionId(); /// Cache last collision ID
 
         const auto& tracksInCollision = tracks.sliceBy(perCollision, lastCollisionId);
-        // const auto& collision = t.collision_as<EvTimeCollisions>();
-
+#ifndef MERGEWITHFT0
+        const auto& collision = t.collision_as<EvTimeCollisionsFT0>();
+#endif
         // Compute the TOF event time
         const auto evTimeMakerTOF = evTimeMakerForTracks<Run3TrksWtof::iterator, filterForTOFEventTime, o2::pid::tof::ExpTimes>(tracksInCollision, mRespParamsV3, kDiamond);
 
@@ -774,6 +789,7 @@ struct tofEventTime {
             sumOfWeights += weight;
           }
 
+#ifdef MERGEWITHFT0
           float t0A = collisionFt0Map[t.collisionId()].first;  // T0A for the collision
           float t0C = collisionFt0Map[t.collisionId()].second; // T0C for the collision
 
@@ -783,6 +799,15 @@ struct tofEventTime {
             t0AC[1] = 0.5 * std::abs(t0A - t0C) * 1000.f;
             flags |= o2::aod::pidflags::enums::PIDFlags::EvTimeT0AC;
 
+#else
+          if (collision.has_foundFT0()) { // T0 measurement is available
+            // const auto& ft0 = collision.foundFT0();
+            if (collision.t0ACValid()) {
+              t0AC[0] = collision.t0AC() * 1000.f;
+              t0AC[1] = collision.t0resolution() * 1000.f;
+              flags |= o2::aod::pidflags::enums::PIDFlags::EvTimeT0AC;
+            }
+#endif
             weight = 1.f / (t0AC[1] * t0AC[1]);
             eventTime += t0AC[0] * weight;
             sumOfWeights += weight;
@@ -856,6 +881,7 @@ struct tofEventTime {
           tableEvTime(0.f, 999.f);
           continue;
         }
+#ifdef MERGEWITHFT0
 
         float t0A = collisionFt0Map[t.collisionId()].first;  // T0A for the collision
         float t0C = collisionFt0Map[t.collisionId()].second; // T0C for the collision
@@ -870,6 +896,20 @@ struct tofEventTime {
         }
         tableFlags(flags);
         tableEvTime(t0AC[0], t0AC[1]);
+#else
+        const auto& collision = t.collision_as<EvTimeCollisionsFT0>();
+
+        if (collision.has_foundFT0()) { // T0 measurement is available
+          // const auto& ft0 = collision.foundFT0();
+          if (collision.t0ACValid()) {
+            tableFlags(o2::aod::pidflags::enums::PIDFlags::EvTimeT0AC);
+            tableEvTime(collision.t0AC() * 1000.f, collision.t0resolution() * 1000.f);
+            continue;
+          }
+        }
+        tableFlags(0);
+        tableEvTime(0.f, 999.f);
+#endif
       }
     } else { // Error
       LOG(fatal) << "Invalid configuration for TOF event time computation";
