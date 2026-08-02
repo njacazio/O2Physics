@@ -88,3 +88,8 @@ o2physics_add_dpl_workflow(alice3-decayer-qa
                     SOURCES alice3DecayerQa.cxx
                     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
                     COMPONENT_NAME Analysis)
+
+# o2physics_add_dpl_workflow(alice3-ditto-mc
+#                     SOURCES alice3DittoMc.cxx
+#                     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+#                     COMPONENT_NAME Analysis)
