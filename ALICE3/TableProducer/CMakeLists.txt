@@ -80,3 +80,8 @@ o2physics_add_dpl_workflow(alice3-strangeness-tof-pid
                     SOURCES alice3StrangenessTofPid.cxx
                     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2Physics::ALICE3Core
                     COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(alice3-ditto-mc-table-maker
+                    SOURCES alice3DittoMcTableMaker.cxx
+                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+                    COMPONENT_NAME Analysis)
