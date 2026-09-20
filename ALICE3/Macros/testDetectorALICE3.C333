@@ -1,0 +1,114 @@
+// Copyright 2019-2020 CERN and copyright holders of ALICE O2.
+// See https://alice-o2.web.cern.ch/copyright for details of the copyright holders.
+// All rights not expressly granted are reserved.
+//
+// This software is distributed under the terms of the GNU General Public
+// License v3 (GPL Version 3), copied verbatim in the file "COPYING".
+//
+// In applying this license CERN does not waive the privileges and immunities
+// granted to it by virtue of its status as an Intergovernmental Organization
+// or submit itself to any jurisdiction.
+
+#if !defined(__CINT__) || defined(__MAKECINT__)
+#include "ALICE3/Core/DetLayer.h"
+#include "ALICE3/Core/FastTracker.h"
+
+#include <TCanvas.h>
+#include <TEfficiency.h>
+#include <TF1.h>
+#include <TH1.h>
+#include <TH2.h>
+#include <TMath.h>
+#include <TObjArray.h>
+#include <TProfile.h>
+#include <TRandom.h>
+#endif
+
+void testDetectorALICE3()
+{
+
+  o2::fastsim::FastTracker* alice3 = new o2::fastsim::FastTracker();
+  alice3->SetIntegrationTime(100.e-6);          // 100 ns (as in LoI)
+  alice3->SetMaxRadiusOfSlowDetectors(0.00001); // no slow detectors
+
+  alice3->SetAvgRapidity(1.5);
+  alice3->SetdNdEtaCent(2000);
+  alice3->SetLhcUPCscale(1.);
+  alice3->SetBField(1.); // Tesla
+
+  // Layer properties
+  Double_t x0IT = 0.001; // 0.1%
+  Double_t x0OT = 0.010; // 1%
+
+  Double_t xrhoIT = 2.3292e-02; // 100 mum Si
+  Double_t xrhoOT = 2.3292e-01; // 1000 mum Si
+
+  Double_t resRPhiIT = 0.00025; //  2.5 mum
+  Double_t resZIT = 0.00025;    //  2.5 mum
+  Double_t resRPhiOT = 0.0010;  // 10 mum
+  Double_t resZOT = 0.0010;     // 10 mum
+  Double_t eff = 0.98;
+  //
+  Double_t scaleR = 1.0;
+  const float length = 250;
+  //
+  alice3->AddLayer("vertex", 0.0, length, 0, 0);        // dummy vertex for matrix calculation
+  alice3->AddLayer("bpipe0", 0.48, length, 0.00042, 0); // 150 mum Be
+  alice3->AddLayer("ddd0", 0.5, length, x0IT, xrhoIT, resRPhiIT, resZIT, eff, 1);
+  alice3->AddLayer("ddd1", 1.2, length, x0IT, xrhoIT, resRPhiIT, resZIT, eff, 1);
+  alice3->AddLayer("ddd2", 2.5, length, x0IT, xrhoIT, resRPhiIT, resZIT, eff, 1);
+  // alice3->AddLayer("bpipe1", 5.7, length, 0.0014, 0); // 500 mum Be
+  alice3->AddLayer("ddd3", 7, length, x0OT, xrhoOT, resRPhiOT, resZOT, eff, 1);
+  alice3->AddLayer("ddd4", 10., length, x0OT, xrhoOT, resRPhiOT, resZOT, eff, 1);
+  alice3->AddLayer("ddd5", 13., length, x0OT, xrhoOT, resRPhiOT, resZOT, eff, 1);
+  alice3->AddLayer("ddd6", 16., length, x0OT, xrhoOT, resRPhiOT, resZOT, eff, 1);
+  // alice3->AddLayer("iTOF", 20., length, 3. * x0OT, xrhoOT, 0.03, 0.03, 1.0);
+  alice3->AddLayer("ddd7", 30. * scaleR, length, x0OT, xrhoOT, resRPhiOT, resZOT, eff, 1);
+  alice3->AddLayer("ddd8", 45. * scaleR, length, x0OT, xrhoOT, resRPhiOT, resZOT, eff, 1);
+  alice3->AddLayer("ddd9", 60. * scaleR, length, x0OT, xrhoOT, resRPhiOT, resZOT, eff, 1);
+  alice3->AddLayer("ddd10", 80. * scaleR, length, x0OT, xrhoOT, resRPhiOT, resZOT, eff, 1);
+
+  alice3->SetMinRadTrack(20.);
+  alice3->Print();
+
+  // Now we do a scan in pT of the tracking performance
+  o2::track::TrackParCov trkIn;
+  o2::track::TrackParCov trkOut;
+  TAxis* axisPt = new TAxis(100, 0., 1);
+  std::array<float, o2::track::kNParams> arraypar = {0, 0, 0, 0, 0};
+  arraypar[o2::track::kY] = 0.f;
+  arraypar[o2::track::kZ] = 0.f;
+  arraypar[o2::track::kSnp] = 0.f;
+  arraypar[o2::track::kTgl] = 0.f;
+  TProfile* hResPt = new TProfile("hResPt", "Pt resolution", axisPt->GetNbins(), axisPt->GetXmin(), axisPt->GetXmax());
+  TEfficiency* hEff = new TEfficiency("hEff", "Tracking efficiency", axisPt->GetNbins(), axisPt->GetXmin(), axisPt->GetXmax());
+  for (int i = 1; i <= axisPt->GetNbins(); i++) {
+    float pt = axisPt->GetBinCenter(i);
+    arraypar[o2::track::kQ2Pt] = 1.f / pt;
+    // value_t x, value_t alpha, const params_t& par, int charge, const PID pid
+    trkIn.set(0.f, 0.f, std::move(arraypar));
+    // Print eta pt and phi
+    LOG(info) << "eta " << trkIn.getEta() << " pt " << trkIn.getPt() << " phi " << trkIn.getPhi();
+    // trkIn.print();
+    // return;
+    for (int j = 0; j < 1000; j++) {
+      const int intercepts = alice3->FastTrack(trkIn, trkOut, 100.f);
+      // LOG(info) << intercepts;
+      if (intercepts > 0) {
+        hEff->Fill(true, pt);
+        float delta = trkOut.getPtInv() - trkIn.getPtInv();
+        LOG(info) << delta;
+        hResPt->Fill(pt, delta);
+        // hResPt->Fill(pt, 1);
+      } else {
+        hEff->Fill(false, pt);
+      }
+      // trkOut.print();
+    }
+  }
+
+  TCanvas* cResPt = new TCanvas("cResPt", "cResPt");
+  hResPt->Draw();
+  TCanvas* cEff = new TCanvas("cEff", "cEff");
+  hEff->Draw();
+}
