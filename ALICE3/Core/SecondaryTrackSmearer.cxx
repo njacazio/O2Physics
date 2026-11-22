@@ -142,7 +142,7 @@ float SecondaryTrackSmearer::efficiency(const SecondaryLutEntry& entry) const
   return mWhatEfficiency == kWhatEfficiencyReco ? entry.eff : entry.eff2;
 }
 
-const SecondaryLutEntry* SecondaryTrackSmearer::getLUTEntry(int pdg, float nch, float radius, float eta, float pt, int nHits, float& interpolatedEff) const
+const SecondaryLutEntry* SecondaryTrackSmearer::getLUTEntry(int pdg, float nch, float eta, float pt, int nHits, float& interpolatedEff) const
 {
   interpolatedEff = std::numeric_limits<float>::quiet_NaN();
   const auto* table = getLUT(pdg);
@@ -150,16 +150,15 @@ const SecondaryLutEntry* SecondaryTrackSmearer::getLUTEntry(int pdg, float nch, 
     LOGF(warn, "No secondary LUT loaded for PDG %d", pdg);
     return nullptr;
   }
-  if (nHits < 0 || !std::isfinite(nch) || !std::isfinite(radius) || !std::isfinite(eta) || !std::isfinite(pt)) {
+  if (nHits < 0 || !std::isfinite(nch) || !std::isfinite(eta) || !std::isfinite(pt)) {
     LOGF(error, "Invalid secondary LUT lookup values for PDG %d", pdg);
     return nullptr;
   }
   nch = clampToAxis(table->getAxis(SecondaryLut::kNch), nch);
-  radius = clampToAxis(table->getAxis(SecondaryLut::kRad), radius);
   eta = clampToAxis(table->getAxis(SecondaryLut::kEta), eta);
   pt = clampToAxis(table->getAxis(SecondaryLut::kPt), pt);
   const float hits = clampToAxis(table->getAxis(SecondaryLut::kNHits), static_cast<float>(nHits));
-  const auto* entry = table->lookup(nch, radius, eta, pt, hits);
+  const auto* entry = table->lookup(nch, eta, pt, hits);
   interpolatedEff = efficiency(*entry);
   if (!mInterpolateEfficiency || !entry->valid) {
     return entry;
@@ -170,12 +169,11 @@ const SecondaryLutEntry* SecondaryTrackSmearer::getLUTEntry(int pdg, float nch, 
   const float position = std::clamp((value - axis.min) / (axis.max - axis.min) * axis.nbins - 0.5f, 0.f, static_cast<float>(axis.nbins - 1));
   const int lower = static_cast<int>(position);
   const int upper = std::min(lower + 1, axis.nbins - 1);
-  const int irad = table->getAxis(SecondaryLut::kRad).find(radius);
   const int ieta = table->getAxis(SecondaryLut::kEta).find(eta);
   const int ipt = table->getAxis(SecondaryLut::kPt).find(pt);
   const int ihits = table->getAxis(SecondaryLut::kNHits).find(hits);
-  const auto& low = table->at(lower, irad, ieta, ipt, ihits);
-  const auto& high = table->at(upper, irad, ieta, ipt, ihits);
+  const auto& low = table->at(lower, ieta, ipt, ihits);
+  const auto& high = table->at(upper, ieta, ipt, ihits);
   if (!low.valid || !high.valid) {
     LOGF(warn, "Cannot interpolate secondary LUT efficiency across an invalid bin for PDG %d", pdg);
     return entry;
@@ -185,8 +183,11 @@ const SecondaryLutEntry* SecondaryTrackSmearer::getLUTEntry(int pdg, float nch, 
   return entry;
 }
 
-bool SecondaryTrackSmearer::smearTrack(O2Track& track, const SecondaryLutEntry* entry, float interpolatedEff)
+bool SecondaryTrackSmearer::smearTrack(O2Track& track, const SecondaryLutEntry* entry, float interpolatedEff, bool* wasSmeared)
 {
+  if (wasSmeared) {
+    *wasSmeared = false;
+  }
   if (!entry || !entry->valid) {
     LOG(warn) << "Cannot smear a track with a missing or invalid secondary LUT entry";
     return false;
@@ -216,10 +217,14 @@ bool SecondaryTrackSmearer::smearTrack(O2Track& track, const SecondaryLutEntry* 
       flatEntry.eiginv[i][j] = entry->eiginv[i * kNumEigenModes + j];
     }
   }
-  return mSmearer.smearTrack(track, &flatEntry, interpolatedEff);
+  const bool reconstructed = mSmearer.smearTrack(track, &flatEntry, interpolatedEff);
+  if (wasSmeared) {
+    *wasSmeared = reconstructed || !mSkipUnreconstructed;
+  }
+  return reconstructed;
 }
 
-bool SecondaryTrackSmearer::smearTrack(O2Track& track, int pdg, float nch, float radius, int nHits)
+bool SecondaryTrackSmearer::smearTrack(O2Track& track, int pdg, float nch, int nHits, bool* wasSmeared)
 {
   float pt = track.getPt();
   const auto key = particleKey(pdg);
@@ -227,14 +232,14 @@ bool SecondaryTrackSmearer::smearTrack(O2Track& track, int pdg, float nch, float
     pt *= 2.f;
   }
   float interpolatedEff;
-  const auto* entry = getLUTEntry(pdg, nch, radius, track.getEta(), pt, nHits, interpolatedEff);
-  return smearTrack(track, entry, interpolatedEff);
+  const auto* entry = getLUTEntry(pdg, nch, track.getEta(), pt, nHits, interpolatedEff);
+  return smearTrack(track, entry, interpolatedEff, wasSmeared);
 }
 
-double SecondaryTrackSmearer::getEfficiency(int pdg, float nch, float radius, float eta, float pt, int nHits) const
+double SecondaryTrackSmearer::getEfficiency(int pdg, float nch, float eta, float pt, int nHits) const
 {
   float result;
-  const auto* entry = getLUTEntry(pdg, nch, radius, eta, pt, nHits, result);
+  const auto* entry = getLUTEntry(pdg, nch, eta, pt, nHits, result);
   if (!entry || !entry->valid || !std::isfinite(result) || result < 0.f || result > 1.f) {
     LOGF(warn, "No valid secondary LUT efficiency for PDG %d", pdg);
     return std::numeric_limits<double>::quiet_NaN();
@@ -242,10 +247,10 @@ double SecondaryTrackSmearer::getEfficiency(int pdg, float nch, float radius, fl
   return result;
 }
 
-double SecondaryTrackSmearer::getPtRes(int pdg, float nch, float radius, float eta, float pt, int nHits) const
+double SecondaryTrackSmearer::getPtRes(int pdg, float nch, float eta, float pt, int nHits) const
 {
   float ignored;
-  const auto* entry = getLUTEntry(pdg, nch, radius, eta, pt, nHits, ignored);
+  const auto* entry = getLUTEntry(pdg, nch, eta, pt, nHits, ignored);
   if (!entry || !entry->valid) {
     LOGF(warn, "No valid secondary LUT resolution for PDG %d", pdg);
     return std::numeric_limits<double>::quiet_NaN();
@@ -258,9 +263,9 @@ double SecondaryTrackSmearer::getPtRes(int pdg, float nch, float radius, float e
   return std::sqrt(entry->covm[14]) * axis.center(axis.find(clampToAxis(axis, pt)));
 }
 
-double SecondaryTrackSmearer::getAbsPtRes(int pdg, float nch, float radius, float eta, float pt, int nHits) const
+double SecondaryTrackSmearer::getAbsPtRes(int pdg, float nch, float eta, float pt, int nHits) const
 {
-  const double relative = getPtRes(pdg, nch, radius, eta, pt, nHits);
+  const double relative = getPtRes(pdg, nch, eta, pt, nHits);
   if (!std::isfinite(relative)) {
     return relative;
   }
@@ -268,10 +273,10 @@ double SecondaryTrackSmearer::getAbsPtRes(int pdg, float nch, float radius, floa
   return relative * axis.center(axis.find(clampToAxis(axis, pt)));
 }
 
-double SecondaryTrackSmearer::getAbsEtaRes(int pdg, float nch, float radius, float eta, float pt, int nHits) const
+double SecondaryTrackSmearer::getAbsEtaRes(int pdg, float nch, float eta, float pt, int nHits) const
 {
   float ignored;
-  const auto* entry = getLUTEntry(pdg, nch, radius, eta, pt, nHits, ignored);
+  const auto* entry = getLUTEntry(pdg, nch, eta, pt, nHits, ignored);
   if (!entry || !entry->valid) {
     LOGF(warn, "No valid secondary LUT resolution for PDG %d", pdg);
     return std::numeric_limits<double>::quiet_NaN();
@@ -283,9 +288,9 @@ double SecondaryTrackSmearer::getAbsEtaRes(int pdg, float nch, float radius, flo
   return std::fabs(std::sin(2.0 * std::atan(std::exp(-eta)))) * std::sqrt(entry->covm[9]);
 }
 
-double SecondaryTrackSmearer::getEtaRes(int pdg, float nch, float radius, float eta, float pt, int nHits) const
+double SecondaryTrackSmearer::getEtaRes(int pdg, float nch, float eta, float pt, int nHits) const
 {
-  const double absolute = getAbsEtaRes(pdg, nch, radius, eta, pt, nHits);
+  const double absolute = getAbsEtaRes(pdg, nch, eta, pt, nHits);
   if (!std::isfinite(absolute)) {
     return absolute;
   }

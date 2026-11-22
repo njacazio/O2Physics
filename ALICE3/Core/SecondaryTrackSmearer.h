@@ -46,23 +46,28 @@ class SecondaryTrackSmearer
     mInterpolateEfficiency = value;
     mSmearer.interpolateEfficiency(value);
   }
-  void skipUnreconstructed(bool value) { mSmearer.skipUnreconstructed(value); }
+  void skipUnreconstructed(bool value)
+  {
+    mSkipUnreconstructed = value;
+    mSmearer.skipUnreconstructed(value);
+  }
   void setWhatEfficiency(EfficiencyType value);
   void setCcdbManager(o2::ccdb::BasicCCDBManager* manager) { mCcdbManager = manager; }
 
   /// Lookup clamps each coordinate to the table range; nHits must be nonnegative.
   /// The returned pointer is invalidated when its table is reloaded or destroyed.
-  [[nodiscard]] const SecondaryLutEntry* getLUTEntry(int pdg, float nch, float radius, float eta, float pt, int nHits, float& interpolatedEff) const;
-  bool smearTrack(O2Track& track, const SecondaryLutEntry* entry, float interpolatedEff);
-  /// radius is the value of the LUT's rad axis, supplied explicitly by the caller.
-  bool smearTrack(O2Track& track, int pdg, float nch, float radius, int nHits);
+  [[nodiscard]] const SecondaryLutEntry* getLUTEntry(int pdg, float nch, float eta, float pt, int nHits, float& interpolatedEff) const;
+  /// wasSmeared reports whether the track was modified, including rejected
+  /// tracks when skipUnreconstructed is false.
+  bool smearTrack(O2Track& track, const SecondaryLutEntry* entry, float interpolatedEff, bool* wasSmeared = nullptr);
+  bool smearTrack(O2Track& track, int pdg, float nch, int nHits, bool* wasSmeared = nullptr);
 
   /// Queries return NaN if no valid entry is available.
-  [[nodiscard]] double getEfficiency(int pdg, float nch, float radius, float eta, float pt, int nHits) const;
-  [[nodiscard]] double getPtRes(int pdg, float nch, float radius, float eta, float pt, int nHits) const;
-  [[nodiscard]] double getEtaRes(int pdg, float nch, float radius, float eta, float pt, int nHits) const;
-  [[nodiscard]] double getAbsPtRes(int pdg, float nch, float radius, float eta, float pt, int nHits) const;
-  [[nodiscard]] double getAbsEtaRes(int pdg, float nch, float radius, float eta, float pt, int nHits) const;
+  [[nodiscard]] double getEfficiency(int pdg, float nch, float eta, float pt, int nHits) const;
+  [[nodiscard]] double getPtRes(int pdg, float nch, float eta, float pt, int nHits) const;
+  [[nodiscard]] double getEtaRes(int pdg, float nch, float eta, float pt, int nHits) const;
+  [[nodiscard]] double getAbsPtRes(int pdg, float nch, float eta, float pt, int nHits) const;
+  [[nodiscard]] double getAbsEtaRes(int pdg, float nch, float eta, float pt, int nHits) const;
 
  private:
   bool installTable(int pdg, std::unique_ptr<SecondaryLut> table, bool forceReload);
@@ -73,6 +78,7 @@ class SecondaryTrackSmearer
   o2::ccdb::BasicCCDBManager* mCcdbManager = nullptr;
   bool mUseEfficiency = true;
   bool mInterpolateEfficiency = false;
+  bool mSkipUnreconstructed = true;
   EfficiencyType mWhatEfficiency = kWhatEfficiencyReco;
 };
 
